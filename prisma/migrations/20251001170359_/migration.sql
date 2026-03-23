@@ -9,8 +9,22 @@ CREATE TABLE "public"."mealfood" (
 );
 
 -- AlterTable
-ALTER TABLE "public"."food" ADD COLUMN "isActive" BOOLEAN NOT NULL DEFAULT true,
-ADD COLUMN "profileId" UUID NOT NULL;
+ALTER TABLE "public"."food"
+ADD COLUMN IF NOT EXISTS "isActive" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN IF NOT EXISTS "profileId" UUID;
+
+-- Ensure a fallback profile exists for legacy foods created before profileId was introduced.
+INSERT INTO "public"."profile" ("id", "role")
+VALUES ('00000000-0000-0000-0000-000000000001', 'admin')
+ON CONFLICT ("id") DO NOTHING;
+
+-- Backfill existing foods so NOT NULL can be applied safely.
+UPDATE "public"."food"
+SET "profileId" = '00000000-0000-0000-0000-000000000001'
+WHERE "profileId" IS NULL;
+
+ALTER TABLE "public"."food"
+ALTER COLUMN "profileId" SET NOT NULL;
 
 -- CreateIndex
 CREATE UNIQUE INDEX "mealfood_mealId_foodId_key" ON "public"."mealfood"("mealId", "foodId");

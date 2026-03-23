@@ -14,6 +14,7 @@
     "tsx": "^4.20.5"
   },
   "scripts": {
+    "prestart": "npx prisma generate",
     "start": "node index.js",
     "test": "jest",
     "test:watch": "jest --watch",
