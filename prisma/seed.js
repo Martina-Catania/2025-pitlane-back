@@ -3,6 +3,12 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function main() {
+  await prisma.dietaryRestriction.upsert({
+    where: { DietaryRestrictionID: 0 },
+    update: { name: 'For Everyone' },
+    create: { DietaryRestrictionID: 0, name: 'For Everyone' },
+  });
+
   // Create Preferences
   const healthy = await prisma.preference.upsert({
     where: { name: 'Healthy' },
