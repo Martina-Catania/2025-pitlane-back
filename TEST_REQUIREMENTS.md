@@ -2,29 +2,34 @@
 
 ## Prerequisites
 
-1. **Docker installed and running**
+1. **PostgreSQL installed and running locally**
 2. **Node.js and npm installed**
 3. **Prisma CLI installed** (`npm install -g prisma` or use `npx prisma`)
 
 ## Test Database Setup
 
-The test suite uses a separate PostgreSQL database running in Docker to avoid affecting your development/production data.
+The test suite uses a separate local PostgreSQL database to avoid affecting your development/production data.
 
 ### Configuration
 
 - **Database:** `pitlane_test`
 - **User:** `postgres`
 - **Password:** `testpassword123`
-- **Port:** `5433` (to avoid conflict with development DB on 5432)
-- **Connection String:** `postgresql://postgres:testpassword123@localhost:5433/pitlane_test`
+- **Port:** configure in `.env.test` (commonly `5432` or `5433`)
+- **Connection String:** configure in `.env.test`
+
+Example:
+
+```bash
+DATABASE_URL="postgresql://postgres:testpassword123@localhost:5432/pitlane_test?schema=public"
+DIRECT_URL="postgresql://postgres:testpassword123@localhost:5432/pitlane_test?schema=public"
+```
 
 ## Running Tests
 
-### 1. Start the Test Database
+### 1. Ensure Local PostgreSQL Is Running
 
-```bash
-docker-compose -f docker-compose.test.yml up -d
-```
+Start your local PostgreSQL service and make sure the `pitlane_test` database exists.
 
 ### 2. Run Tests
 
@@ -33,36 +38,38 @@ npm test
 ```
 
 The test script automatically:
-- Waits for PostgreSQL to be ready
+- Checks PostgreSQL connectivity using `DATABASE_URL`
 - Runs Prisma migrations
 - Seeds the test database
 - Executes all test suites
 - Cleans up after completion
 
-### 3. Stop the Test Database
+### 3. Optional: Prepare or Reset Test DB Manually
 
 ```bash
-docker-compose -f docker-compose.test.yml down
+npm run test:db:prepare
+npm run test:db:reset
 ```
 
 ## Manual Testing with Postman
 
 To test API endpoints manually using the test database:
 
-### 1. Start Test Database
+### 1. Ensure Local PostgreSQL Is Running
 ```bash
-docker-compose -f docker-compose.test.yml up -d
+# Example (Windows service name may vary)
+Get-Service *postgres* 
 ```
 
 ### 2. Run Migrations (first time only)
 ```bash
-$env:DATABASE_URL="postgresql://postgres:testpassword123@localhost:5433/pitlane_test"
+$env:DATABASE_URL="postgresql://postgres:testpassword123@localhost:5432/pitlane_test?schema=public"
 npx prisma migrate deploy
 ```
 
 ### 3. Start API Server with Test Database
 ```bash
-$env:DATABASE_URL="postgresql://postgres:testpassword123@localhost:5433/pitlane_test"
+$env:DATABASE_URL="postgresql://postgres:testpassword123@localhost:5432/pitlane_test?schema=public"
 npm start
 ```
 
@@ -79,23 +86,24 @@ npm start
 
 ## Common Issues
 
-### Port Already in Use
-If port 5433 is already in use:
-```bash
-docker-compose -f docker-compose.test.yml down
+### Database Does Not Exist
+Create it manually in PostgreSQL:
+
+```sql
+CREATE DATABASE pitlane_test;
 ```
 
 ### Database Connection Errors
-Check that the test database is running:
+Check local PostgreSQL service status and `.env.test` credentials/port:
+
 ```bash
-docker ps
+Get-Service *postgres*
 ```
 
 ### Migration Errors
 Reset the test database:
 ```bash
-docker-compose -f docker-compose.test.yml down -v
-docker-compose -f docker-compose.test.yml up -d
+npm run test:db:reset
 ```
 
 ## Notes

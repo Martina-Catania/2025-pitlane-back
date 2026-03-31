@@ -35,8 +35,8 @@ async function main() {
 
   // Create Profile (only id and username)
   const testProfile = await prisma.profile.upsert({
-    where: { username: 'testuser' },
-    update: {},
+    where: { id: '00000000-0000-0000-0000-000000000001' },
+    update: { username: 'testuser' },
     create: {
       id: '00000000-0000-0000-0000-000000000001', // Example UUID, replace as needed
       username: 'testuser',

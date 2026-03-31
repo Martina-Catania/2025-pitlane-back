@@ -1,64 +1,42 @@
 const { execSync } = require('child_process');
 const path = require('path');
 const dotenv = require('dotenv');
+const postgres = require('postgres');
 
 // Load test environment variables
 const envPath = path.resolve(__dirname, '../../.env.test');
 dotenv.config({ path: envPath });
 
-// Check if running in CI environment
-const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
-
 module.exports = async () => {
   console.log('\n🚀 Starting test environment setup...\n');
 
   try {
-    // Skip Docker setup in CI environments (GitHub Actions provides PostgreSQL)
-    if (!isCI) {
-      // Check if Docker is running
-      try {
-        execSync('docker info', { stdio: 'ignore' });
-      } catch (error) {
-        throw new Error('❌ Docker is not running. Please start Docker Desktop and try again.');
-      }
+    if (!process.env.DATABASE_URL) {
+      throw new Error('❌ DATABASE_URL is not set. Configure it in .env.test before running tests.');
+    }
 
-      // Start the test database container
-      console.log('🐳 Starting test database container...');
-      try {
-        execSync('docker-compose -f docker-compose.test.yml up -d', { 
-          stdio: 'inherit',
-          cwd: path.resolve(__dirname, '../..')
-        });
-      } catch (error) {
-        throw new Error('❌ Failed to start Docker container. Make sure docker-compose.test.yml exists.');
-      }
+    // Verify local PostgreSQL connectivity before running migrations.
+    console.log('🔎 Checking local PostgreSQL connection...');
+    const connectionUrl = new URL(process.env.DATABASE_URL);
+    connectionUrl.searchParams.delete('schema');
 
-      // Wait for database to be ready
-      console.log('⏳ Waiting for PostgreSQL to be ready...');
-      let retries = 60; // Increased timeout
-      let lastError = null;
-      while (retries > 0) {
-        try {
-          execSync('docker exec pitlane-test-db pg_isready -U postgres', { stdio: 'ignore' });
-          console.log('✅ PostgreSQL is ready!\n');
-          break;
-        } catch (error) {
-          lastError = error;
-          retries--;
-          if (retries === 0) {
-            console.error('❌ PostgreSQL failed to start. Last error:', lastError.message);
-            console.error('\nTroubleshooting:');
-            console.error('1. Check if Docker Desktop is running');
-            console.error('2. Run: docker-compose -f docker-compose.test.yml logs');
-            console.error('3. Run: docker ps -a');
-            throw new Error('PostgreSQL failed to start in time');
-          }
-          process.stdout.write('.');
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
-    } else {
-      console.log('🔧 Running in CI environment - using provided PostgreSQL service...\n');
+    const sql = postgres(connectionUrl.toString(), {
+      max: 1,
+      connect_timeout: 5,
+      idle_timeout: 5,
+    });
+
+    try {
+      await sql`SELECT 1`;
+      console.log('✅ PostgreSQL is reachable!\n');
+    } catch (error) {
+      throw new Error(
+        `❌ Could not connect to PostgreSQL using DATABASE_URL. ` +
+        `Start your local PostgreSQL service and verify credentials/database in .env.test. ` +
+        `Original error: ${error.message}`
+      );
+    } finally {
+      await sql.end({ timeout: 5 });
     }
 
     // Run Prisma migrations

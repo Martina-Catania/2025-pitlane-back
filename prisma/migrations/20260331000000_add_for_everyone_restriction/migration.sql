@@ -8,6 +8,6 @@ SET "name" = EXCLUDED."name";
 -- Keep SERIAL sequence in sync after explicit ID insertion
 SELECT setval(
   pg_get_serial_sequence('"public"."dietaryrestriction"', 'DietaryRestrictionID'),
-  COALESCE((SELECT MAX("DietaryRestrictionID") FROM "public"."dietaryrestriction"), 0),
+  GREATEST(COALESCE((SELECT MAX("DietaryRestrictionID") FROM "public"."dietaryrestriction"), 1), 1),
   true
 );
