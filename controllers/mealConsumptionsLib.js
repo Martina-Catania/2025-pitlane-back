@@ -201,6 +201,13 @@ async function createIndividualMealConsumption(consumptionData, profileId) {
         throw new Error('Meal ID is required');
     }
 
+    if (consumedAt) {
+        const consumedDate = new Date(consumedAt);
+        if (!Number.isNaN(consumedDate.getTime()) && consumedDate > new Date()) {
+            throw new Error('Future consumptions must be planned first');
+        }
+    }
+
     // Fetch meal data
     const mealData = await prisma.meal.findUnique({
         where: { MealID: mealId },
@@ -337,6 +344,13 @@ async function createGroupMealConsumption(consumptionData, profileId) {
 
     if (!groupId) {
         throw new Error('Group ID is required for group consumption');
+    }
+
+    if (consumedAt) {
+        const consumedDate = new Date(consumedAt);
+        if (!Number.isNaN(consumedDate.getTime()) && consumedDate > new Date()) {
+            throw new Error('Future consumptions must be planned first');
+        }
     }
 
     // Verify that the user is a member of the group and get all group members

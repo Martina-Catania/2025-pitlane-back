@@ -10,28 +10,48 @@ async function main() {
   });
 
   // Create Preferences
-  const healthy = await prisma.preference.upsert({
-    where: { name: 'Healthy' },
-    update: {},
-    create: { name: 'Healthy' },
-  });
-  const vegan = await prisma.preference.upsert({
-    where: { name: 'Vegan' },
-    update: {},
-    create: { name: 'Vegan' },
-  });
+  const preferenceNames = [
+    'Healthy',
+    'Vegan',
+    'Vegetarian',
+    'High Protein',
+    'Low Carb',
+    'Keto',
+    'Mediterranean',
+    'Low Sodium',
+    'Pescatarian',
+    'Whole Foods'
+  ];
+
+  for (const name of preferenceNames) {
+    await prisma.preference.upsert({
+      where: { name },
+      update: {},
+      create: { name }
+    });
+  }
 
   // Create Dietary Restrictions
-  const glutenFree = await prisma.dietaryRestriction.upsert({
-    where: { name: 'Gluten Free' },
-    update: {},
-    create: { name: 'Gluten Free' },
-  });
-  const lactoseFree = await prisma.dietaryRestriction.upsert({
-    where: { name: 'Lactose Free' },
-    update: {},
-    create: { name: 'Lactose Free' },
-  });
+  const dietaryRestrictionNames = [
+    'Gluten Free',
+    'Lactose Free',
+    'Dairy Free',
+    'Nut Free',
+    'Soy Free',
+    'Egg Free',
+    'Shellfish Free',
+    'Halal',
+    'Kosher',
+    'No Pork'
+  ];
+
+  for (const name of dietaryRestrictionNames) {
+    await prisma.dietaryRestriction.upsert({
+      where: { name },
+      update: {},
+      create: { name }
+    });
+  }
 
   // Create Profile (only id and username)
   const testProfile = await prisma.profile.upsert({
