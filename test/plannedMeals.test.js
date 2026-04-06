@@ -172,6 +172,195 @@ describe('Planned Meals API', () => {
     expect(updateRes.body.updatedCount).toBeGreaterThan(0);
   });
 
+  it('filters shopping list by provided date range', async () => {
+    const uniqueFood = await prisma.food.create({
+      data: {
+        name: `Range Food ${Date.now()}`,
+        svgLink: '/range-food.svg',
+        kCal: 150,
+        profileId
+      }
+    });
+
+    const uniqueMeal = await prisma.meal.create({
+      data: {
+        name: `Range Meal ${Date.now()}`,
+        description: 'Meal for shopping list date range tests',
+        profileId,
+        mealFoods: {
+          create: [
+            { foodId: uniqueFood.FoodID, quantity: 1 }
+          ]
+        }
+      }
+    });
+
+    const inRangeDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
+    const outOfRangeDate = new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString();
+
+    await request(app)
+      .post('/planned-meals')
+      .send({ profileId, mealId: uniqueMeal.MealID, plannedFor: inRangeDate });
+
+    await request(app)
+      .post('/planned-meals')
+      .send({ profileId, mealId: uniqueMeal.MealID, plannedFor: outOfRangeDate });
+
+    const startDate = new Date(Date.now()).toISOString();
+    const endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    const listRes = await request(app)
+      .get('/planned-meals/shopping/list')
+      .query({
+        profileId,
+        includePurchased: true,
+        startDate,
+        endDate
+      });
+
+    expect(listRes.statusCode).toBe(200);
+
+    const target = listRes.body.find(item => item.foodId === uniqueFood.FoodID);
+    expect(target).toBeTruthy();
+    expect(target.entries.length).toBe(1);
+
+    const plannedForInResult = new Date(target.entries[0].plannedFor).getTime();
+    expect(plannedForInResult).toBeGreaterThanOrEqual(new Date(startDate).getTime());
+    expect(plannedForInResult).toBeLessThanOrEqual(new Date(endDate).getTime());
+
+    await prisma.plannedMealFood.deleteMany({
+      where: {
+        plannedMeal: {
+          mealId: uniqueMeal.MealID
+        }
+      }
+    });
+
+    await prisma.plannedMeal.deleteMany({
+      where: {
+        mealId: uniqueMeal.MealID
+      }
+    });
+
+    await prisma.mealFood.deleteMany({
+      where: {
+        mealId: uniqueMeal.MealID
+      }
+    });
+
+    await prisma.meal.delete({
+      where: {
+        MealID: uniqueMeal.MealID
+      }
+    });
+
+    await prisma.food.delete({
+      where: {
+        FoodID: uniqueFood.FoodID
+      }
+    });
+  });
+
+  it('updates shopping status only inside provided date range', async () => {
+    const uniqueFood = await prisma.food.create({
+      data: {
+        name: `Scoped Status Food ${Date.now()}`,
+        svgLink: '/scoped-status-food.svg',
+        kCal: 170,
+        profileId
+      }
+    });
+
+    const uniqueMeal = await prisma.meal.create({
+      data: {
+        name: `Scoped Status Meal ${Date.now()}`,
+        description: 'Meal for scoped status updates',
+        profileId,
+        mealFoods: {
+          create: [
+            { foodId: uniqueFood.FoodID, quantity: 1 }
+          ]
+        }
+      }
+    });
+
+    const inRangeDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
+    const outOfRangeDate = new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString();
+
+    const inRangeCreate = await request(app)
+      .post('/planned-meals')
+      .send({ profileId, mealId: uniqueMeal.MealID, plannedFor: inRangeDate });
+
+    const outRangeCreate = await request(app)
+      .post('/planned-meals')
+      .send({ profileId, mealId: uniqueMeal.MealID, plannedFor: outOfRangeDate });
+
+    const startDate = new Date(Date.now()).toISOString();
+    const endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    const updateRes = await request(app)
+      .put('/planned-meals/shopping/status')
+      .send({
+        profileId,
+        foodId: uniqueFood.FoodID,
+        isPurchased: true,
+        startDate,
+        endDate
+      });
+
+    expect(updateRes.statusCode).toBe(200);
+    expect(updateRes.body.updatedCount).toBeGreaterThan(0);
+
+    const inRangeFood = await prisma.plannedMealFood.findFirst({
+      where: {
+        plannedMealId: inRangeCreate.body.PlannedMealID,
+        foodId: uniqueFood.FoodID
+      }
+    });
+
+    const outRangeFood = await prisma.plannedMealFood.findFirst({
+      where: {
+        plannedMealId: outRangeCreate.body.PlannedMealID,
+        foodId: uniqueFood.FoodID
+      }
+    });
+
+    expect(inRangeFood.isPurchased).toBe(true);
+    expect(outRangeFood.isPurchased).toBe(false);
+
+    await prisma.plannedMealFood.deleteMany({
+      where: {
+        plannedMeal: {
+          mealId: uniqueMeal.MealID
+        }
+      }
+    });
+
+    await prisma.plannedMeal.deleteMany({
+      where: {
+        mealId: uniqueMeal.MealID
+      }
+    });
+
+    await prisma.mealFood.deleteMany({
+      where: {
+        mealId: uniqueMeal.MealID
+      }
+    });
+
+    await prisma.meal.delete({
+      where: {
+        MealID: uniqueMeal.MealID
+      }
+    });
+
+    await prisma.food.delete({
+      where: {
+        FoodID: uniqueFood.FoodID
+      }
+    });
+  });
+
   it('resolves overdue planned meal as consumed and removes foods from active list', async () => {
     const overdueMeal = await prisma.plannedMeal.create({
       data: {
