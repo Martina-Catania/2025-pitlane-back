@@ -126,6 +126,7 @@ describe('Planned Meals API', () => {
     expect(res.body.profileId).toBe(profileId);
     expect(res.body.mealId).toBe(mealId);
     expect(res.body.foodItems).toHaveLength(2);
+    expect(Array.isArray(res.body.badgeNotifications)).toBe(true);
   });
 
   it('aggregates quantities for duplicate foods across planned meals', async () => {

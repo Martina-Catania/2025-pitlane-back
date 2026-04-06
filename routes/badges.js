@@ -200,6 +200,16 @@ router.post('/award-retroactive/:profileId', async (req, res) => {
       results.push({ action: 'meal_created', count: mealsCreated, result: mealBadgeResult });
     }
 
+    // Check for planned meal creation badge
+    const plannedMealsCreated = await prisma.plannedMeal.count({
+      where: { profileId: profileId }
+    });
+    console.log(`User created ${plannedMealsCreated} planned meals`);
+    if (plannedMealsCreated > 0) {
+      const plannedMealBadgeResult = await BadgesLibrary.checkAndAwardBadges(profileId, 'planned_meal_created');
+      results.push({ action: 'planned_meal_created', count: plannedMealsCreated, result: plannedMealBadgeResult });
+    }
+
     // Check for voting participation badge
     const votesParticipated = await prisma.vote.count({
       where: { 
@@ -248,6 +258,7 @@ router.post('/award-retroactive/:profileId', async (req, res) => {
       summary: {
         groupsCreated,
         mealsCreated,
+        plannedMealsCreated,
         votesParticipated,
         votingSessionsWon: votingSessions
       }

@@ -128,12 +128,27 @@ async function main() {
     },
   });
 
+  const mealPlannerBadge = await prisma.badge.upsert({
+    where: { name: 'Meal Planner' },
+    update: {
+      iconUrl: null,
+      badgeType: 'meal_planning'
+    },
+    create: {
+      name: 'Meal Planner',
+      description: 'Scheduled meals in advance for upcoming days',
+      badgeType: 'meal_planning',
+      iconUrl: null,
+      isActive: true,
+    },
+  });
+
   console.log('Badges created successfully!');
 
   // Create Badge Requirements (Bronze: 1, Silver: 10, Gold: 50, Diamond: 100)
   console.log('Creating badge requirements...');
 
-  const badges = [groupCreatorBadge, votingParticipantBadge, votingWinnerBadge, mealCreatorBadge];
+  const badges = [groupCreatorBadge, votingParticipantBadge, votingWinnerBadge, mealCreatorBadge, mealPlannerBadge];
   const levels = [
     { level: 'bronze', count: 1, desc: 'Complete 1 action' },
     { level: 'silver', count: 10, desc: 'Complete 10 actions' },

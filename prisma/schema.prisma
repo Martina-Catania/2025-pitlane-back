@@ -23,7 +23,7 @@ model Profile {
   id                       String                     @id @db.Uuid
   role                     Role                       @default(user)
   username                 String?                    @unique
-  calorie_goal             Int?                       @default(2000) // Nuevo campo para objetivos de calorías
+  calorie_goal             Int?                       @default(2000) // Calorie goal target
   primaryBadgeId           Int? // Badge seleccionado por el usuario para mostrar junto a su nombre
   Preference               Preference[]               @relation("profile_preference")
   DietaryRestriction       DietaryRestriction[]       @relation("profile_dietaryrestriction")
@@ -431,6 +431,7 @@ enum BadgeType {
   voting_participation // For participating in voting sessions
   voting_winner // For winning voting sessions
   meal_creation // For creating/uploading meals
+  meal_planning // For planning meals in advance
   consumption_tracking // For tracking individual consumptions
   social_engagement // For social activities
   game_clicker_winner // For winning Egg Clicker games

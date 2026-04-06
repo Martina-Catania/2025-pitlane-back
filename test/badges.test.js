@@ -124,6 +124,20 @@ describe('Badges API', () => {
 
       expect(response.body).toHaveProperty('success');
     });
+
+    it('should track badge progress for planned meal creation', async () => {
+      const trackData = {
+        profileId: testProfile.id,
+        action: 'planned_meal_created'
+      };
+
+      const response = await request(app)
+        .post('/badges/track')
+        .send(trackData)
+        .expect(200);
+
+      expect(response.body).toHaveProperty('success');
+    });
   });
 
   describe('PUT /badges/user/:profileId/primary', () => {

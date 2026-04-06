@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const plannedMealsLib = require('../controllers/plannedMealsLib');
+const BadgesLibrary = require('../controllers/badgesLib');
 
 /**
  * POST /planned-meals
@@ -22,7 +23,22 @@ router.post('/', async (req, res) => {
             resolutionNote
         });
 
-        res.status(201).json(plannedMeal);
+        const response = {
+            ...plannedMeal,
+            badgeNotifications: []
+        };
+
+        try {
+            const badgeResult = await BadgesLibrary.checkAndAwardBadges(profileId, 'planned_meal_created');
+            if (badgeResult.success && badgeResult.badgeNotifications && badgeResult.badgeNotifications.length > 0) {
+                response.badgeNotifications = badgeResult.badgeNotifications;
+            }
+        } catch (badgeError) {
+            console.error('Error awarding planned meal creation badge:', badgeError);
+            // Do not fail planned meal creation if badge awarding fails
+        }
+
+        res.status(201).json(response);
     } catch (error) {
         console.error('Error creating planned meal:', error);
 
