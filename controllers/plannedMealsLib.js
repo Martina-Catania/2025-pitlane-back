@@ -37,6 +37,42 @@ function calculateEstimatedKcal(meal) {
     }, 0);
 }
 
+function buildPlannedFoodItemsFromMeal(meal, portions) {
+    if (!portions || !Array.isArray(portions.foodPortions) || portions.foodPortions.length === 0) {
+        return meal.mealFoods
+            .map(item => ({
+                foodId: item.foodId,
+                quantity: item.quantity
+            }))
+            .filter(item => item.quantity > 0);
+    }
+
+    const selectedByFoodId = new Map();
+    for (const portion of portions.foodPortions) {
+        selectedByFoodId.set(portion.foodId, portion);
+    }
+
+    const foodItems = meal.mealFoods.map(item => {
+        const portion = selectedByFoodId.get(item.foodId);
+        let quantity = item.quantity;
+
+        if (portion) {
+            if (typeof portion.absoluteQuantity === 'number') {
+                quantity = portion.absoluteQuantity;
+            } else if (typeof portion.portionFraction === 'number') {
+                quantity = item.quantity * portion.portionFraction;
+            }
+        }
+
+        return {
+            foodId: item.foodId,
+            quantity: Number(quantity)
+        };
+    });
+
+    return foodItems.filter(item => Number.isFinite(item.quantity) && item.quantity > 0);
+}
+
 async function validateGroupMembership(groupId, profileId) {
     if (!groupId) {
         return null;
@@ -598,6 +634,132 @@ async function resolvePlannedMeal(plannedMealId, payload, requesterId) {
     };
 }
 
+async function updateScheduledPlannedMeal(plannedMealId, requesterId, payload) {
+    const { mealId, plannedFor, portions } = payload || {};
+
+    if (!requesterId) {
+        throw new Error('requesterId is required');
+    }
+
+    if (!mealId && !plannedFor && !portions) {
+        throw new Error('At least one field (mealId, plannedFor, portions) is required');
+    }
+
+    const current = await getPlannedMealById(plannedMealId);
+    if (!current || !current.isActive) {
+        throw new Error('Planned meal not found');
+    }
+
+    if (current.status !== 'scheduled') {
+        throw new Error(`Only scheduled planned meals can be edited (current status: ${current.status})`);
+    }
+
+    if (current.plannedFor <= new Date()) {
+        throw new Error('Only future planned meals can be edited');
+    }
+
+    if (current.groupId) {
+        await validateGroupMembership(current.groupId, requesterId);
+    } else if (current.profileId !== requesterId) {
+        throw new Error('Unauthorized to edit this planned meal');
+    }
+
+    const nextMealId = mealId ? parseInt(mealId) : current.mealId;
+    const nextPlannedFor = plannedFor ? parseDateOrThrow(plannedFor, 'plannedFor') : current.plannedFor;
+
+    if (nextPlannedFor <= new Date()) {
+        throw new Error('plannedFor must be a future date');
+    }
+
+    const meal = await getMealWithFoods(nextMealId);
+    const foodItems = buildPlannedFoodItemsFromMeal(meal, portions);
+
+    if (foodItems.length === 0) {
+        throw new Error('Planned meal must include at least one food item');
+    }
+
+    const estimatedKcal = Math.round(foodItems.reduce((sum, item) => {
+        const mealFood = meal.mealFoods.find(row => row.foodId === item.foodId);
+        if (!mealFood) {
+            return sum;
+        }
+        return sum + (mealFood.food.kCal * item.quantity);
+    }, 0));
+
+    await prisma.$transaction(async (tx) => {
+        await tx.plannedMeal.update({
+            where: {
+                PlannedMealID: parseInt(plannedMealId)
+            },
+            data: {
+                mealId: nextMealId,
+                plannedFor: nextPlannedFor,
+                estimatedKcal
+            }
+        });
+
+        await tx.plannedMealFood.deleteMany({
+            where: {
+                plannedMealId: parseInt(plannedMealId)
+            }
+        });
+
+        await tx.plannedMealFood.createMany({
+            data: foodItems.map(item => ({
+                plannedMealId: parseInt(plannedMealId),
+                foodId: item.foodId,
+                quantity: item.quantity
+            }))
+        });
+    });
+
+    return getPlannedMealById(plannedMealId);
+}
+
+async function deleteScheduledPlannedMeal(plannedMealId, requesterId) {
+    if (!requesterId) {
+        throw new Error('requesterId is required');
+    }
+
+    const current = await getPlannedMealById(plannedMealId);
+    if (!current || !current.isActive) {
+        throw new Error('Planned meal not found');
+    }
+
+    if (current.status !== 'scheduled') {
+        throw new Error(`Only scheduled planned meals can be removed (current status: ${current.status})`);
+    }
+
+    if (current.plannedFor <= new Date()) {
+        throw new Error('Only future planned meals can be removed');
+    }
+
+    if (current.groupId) {
+        await validateGroupMembership(current.groupId, requesterId);
+    } else if (current.profileId !== requesterId) {
+        throw new Error('Unauthorized to delete this planned meal');
+    }
+
+    await prisma.$transaction(async (tx) => {
+        await tx.plannedMealFood.deleteMany({
+            where: {
+                plannedMealId: parseInt(plannedMealId)
+            }
+        });
+
+        await tx.plannedMeal.delete({
+            where: {
+                PlannedMealID: parseInt(plannedMealId)
+            }
+        });
+    });
+
+    return {
+        deleted: true,
+        plannedMealId: parseInt(plannedMealId)
+    };
+}
+
 function startPlannedMealScheduler() {
     console.log('🔄 Starting planned meal scheduler...');
 
@@ -631,5 +793,7 @@ module.exports = {
     updateShoppingItemStatus,
     markOverduePlannedMealsAsAwaitingConfirmation,
     resolvePlannedMeal,
+    updateScheduledPlannedMeal,
+    deleteScheduledPlannedMeal,
     startPlannedMealScheduler
 };

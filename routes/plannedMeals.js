@@ -190,6 +190,67 @@ router.get('/:id', async (req, res) => {
 });
 
 /**
+ * PUT /planned-meals/:id
+ * Edit a scheduled future planned meal.
+ */
+router.put('/:id', async (req, res) => {
+    try {
+        const { requesterId, mealId, plannedFor, portions } = req.body;
+
+        const updated = await plannedMealsLib.updateScheduledPlannedMeal(req.params.id, requesterId, {
+            mealId,
+            plannedFor,
+            portions
+        });
+
+        res.json(updated);
+    } catch (error) {
+        console.error('Error updating planned meal:', error);
+
+        if (
+            error.message.includes('required') ||
+            error.message.includes('Unauthorized') ||
+            error.message.includes('future') ||
+            error.message.includes('scheduled') ||
+            error.message.includes('not found') ||
+            error.message.includes('member')
+        ) {
+            return res.status(400).json({ error: error.message });
+        }
+
+        res.status(500).json({ error: 'Failed to update planned meal', details: error.message });
+    }
+});
+
+/**
+ * DELETE /planned-meals/:id
+ * Hard delete a scheduled future planned meal.
+ */
+router.delete('/:id', async (req, res) => {
+    try {
+        const { requesterId } = req.body;
+
+        const result = await plannedMealsLib.deleteScheduledPlannedMeal(req.params.id, requesterId);
+        res.json(result);
+    } catch (error) {
+        console.error('Error deleting planned meal:', error);
+
+        if (
+            error.message.includes('required') ||
+            error.message.includes('Unauthorized') ||
+            error.message.includes('future') ||
+            error.message.includes('scheduled') ||
+            error.message.includes('not found') ||
+            error.message.includes('member')
+        ) {
+            return res.status(400).json({ error: error.message });
+        }
+
+        res.status(500).json({ error: 'Failed to delete planned meal', details: error.message });
+    }
+});
+
+/**
  * PUT /planned-meals/:id/resolve
  * Resolve overdue planned meal: consumed, rescheduled, or cancelled.
  */
