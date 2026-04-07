@@ -192,10 +192,10 @@ async function getMealConsumptionById(consumptionId) {
 
 /**
  * Create individual meal consumption record
- * Supports both full meals and partial portions
+ * Always records a full meal consumption
  */
 async function createIndividualMealConsumption(consumptionData, profileId) {
-    const { name, description, mealId, consumedAt, portions } = consumptionData;
+    const { name, description, mealId, consumedAt } = consumptionData;
     
     if (!mealId) {
         throw new Error('Meal ID is required');
@@ -224,55 +224,20 @@ async function createIndividualMealConsumption(consumptionData, profileId) {
         throw new Error(`Meal with ID ${mealId} not found`);
     }
 
-    let totalKcal = 0;
-    let portionFraction = 1.0;
-    let foodPortionsData = [];
+    const totalKcal = mealData.mealFoods.reduce((sum, mealFood) => 
+        sum + (mealFood.food.kCal * mealFood.quantity), 0
+    );
 
-    if (portions && portions.foodPortions && portions.foodPortions.length > 0) {
-        // PARTIAL PORTION FLOW
-        portionFraction = portions.portionFraction || 1.0;
-        
-        foodPortionsData = portions.foodPortions.map(fp => {
-            const mealFood = mealData.mealFoods.find(mf => mf.foodId === fp.foodId);
-            if (!mealFood) {
-                throw new Error(`Food ${fp.foodId} not found in meal ${mealId}`);
-            }
-            
-            // Calculate actual quantity consumed
-            const quantityConsumed = fp.absoluteQuantity !== undefined 
-                ? fp.absoluteQuantity 
-                : mealFood.quantity * fp.portionFraction;
-            
-            return {
-                foodId: fp.foodId,
-                portionFraction: fp.portionFraction,
-                quantityConsumed: quantityConsumed
-            };
-        });
-
-        // Calculate calories from actual food portions consumed
-        totalKcal = foodPortionsData.reduce((sum, fp) => {
-            const food = mealData.mealFoods.find(mf => mf.foodId === fp.foodId).food;
-            return sum + (food.kCal * fp.quantityConsumed);
-        }, 0);
-    } else {
-        // FULL MEAL FLOW
-        totalKcal = mealData.mealFoods.reduce((sum, mealFood) => 
-            sum + (mealFood.food.kCal * mealFood.quantity), 0
-        );
-        
-        // Create food portions for full meal
-        foodPortionsData = mealData.mealFoods.map(mf => ({
-            foodId: mf.foodId,
-            portionFraction: 1.0,
-            quantityConsumed: mf.quantity
-        }));
-    }
+    const foodPortionsData = mealData.mealFoods.map(mf => ({
+        foodId: mf.foodId,
+        portionFraction: 1.0,
+        quantityConsumed: mf.quantity
+    }));
 
     console.log('[createIndividualMealConsumption] Creating consumption with:', {
         name,
         mealId,
-        portionFraction,
+        portionFraction: 1.0,
         totalKcal,
         foodPortionsCount: foodPortionsData.length
     });
@@ -285,7 +250,7 @@ async function createIndividualMealConsumption(consumptionData, profileId) {
             mealId,
             type: 'individual',
             source: 'individual',
-            portionFraction,
+            portionFraction: 1.0,
             quantity: 1,
             totalKcal: Math.round(totalKcal),
             consumedAt: consumedAt ? new Date(consumedAt) : new Date(),
@@ -333,10 +298,10 @@ async function createIndividualMealConsumption(consumptionData, profileId) {
 
 /**
  * Create group meal consumption record
- * Supports both full meals and partial portions
+ * Always records a full meal consumption for each active group member
  */
 async function createGroupMealConsumption(consumptionData, profileId) {
-    const { name, description, mealId, groupId, consumedAt, portions } = consumptionData;
+    const { name, description, mealId, groupId, consumedAt } = consumptionData;
     
     if (!mealId) {
         throw new Error('Meal ID is required');
@@ -402,47 +367,15 @@ async function createGroupMealConsumption(consumptionData, profileId) {
         throw new Error(`Meal with ID ${mealId} not found`);
     }
 
-    let totalKcal = 0;
-    let portionFraction = 1.0;
-    let foodPortionsData = [];
+    const totalKcal = mealData.mealFoods.reduce((sum, mealFood) => 
+        sum + (mealFood.food.kCal * mealFood.quantity), 0
+    );
 
-    if (portions && portions.foodPortions && portions.foodPortions.length > 0) {
-        // PARTIAL PORTION FLOW
-        portionFraction = portions.portionFraction || 1.0;
-        
-        foodPortionsData = portions.foodPortions.map(fp => {
-            const mealFood = mealData.mealFoods.find(mf => mf.foodId === fp.foodId);
-            if (!mealFood) {
-                throw new Error(`Food ${fp.foodId} not found in meal ${mealId}`);
-            }
-            
-            const quantityConsumed = fp.absoluteQuantity !== undefined 
-                ? fp.absoluteQuantity 
-                : mealFood.quantity * fp.portionFraction;
-            
-            return {
-                foodId: fp.foodId,
-                portionFraction: fp.portionFraction,
-                quantityConsumed: quantityConsumed
-            };
-        });
-
-        totalKcal = foodPortionsData.reduce((sum, fp) => {
-            const food = mealData.mealFoods.find(mf => mf.foodId === fp.foodId).food;
-            return sum + (food.kCal * fp.quantityConsumed);
-        }, 0);
-    } else {
-        // FULL MEAL FLOW
-        totalKcal = mealData.mealFoods.reduce((sum, mealFood) => 
-            sum + (mealFood.food.kCal * mealFood.quantity), 0
-        );
-        
-        foodPortionsData = mealData.mealFoods.map(mf => ({
-            foodId: mf.foodId,
-            portionFraction: 1.0,
-            quantityConsumed: mf.quantity
-        }));
-    }
+    const foodPortionsData = mealData.mealFoods.map(mf => ({
+        foodId: mf.foodId,
+        portionFraction: 1.0,
+        quantityConsumed: mf.quantity
+    }));
 
     // Use a transaction to create group consumption and individual consumptions for each member
     const result = await prisma.$transaction(async (tx) => {
@@ -458,7 +391,7 @@ async function createGroupMealConsumption(consumptionData, profileId) {
                         groupId: parseInt(groupId),
                         type: 'group', // Mark as group-level consumption
                         source: 'group',
-                        portionFraction,
+                        portionFraction: 1.0,
                         quantity: 1,
                         totalKcal: Math.round(totalKcal),
                         consumedAt: consumedAt ? new Date(consumedAt) : new Date(),
