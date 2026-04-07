@@ -1,29 +1,15 @@
 const express = require('express');
 const BadgesLibrary = require('../controllers/badgesLib');
 const { prisma } = require('../config/prismaClient');
+const { toCamelCaseDeep } = require('../utils/caseTransform');
 const router = express.Router();
 
-function normalizeResponseKey(key) {
-  return key
-    .replace(/_([a-z])/g, (_, c) => c.toUpperCase())
-    .replace(/ID\b/g, 'Id')
-    .replace(/URL\b/g, 'Url')
-    .replace(/^([A-Z])/, (c) => c.toLowerCase());
-}
-
-function toCamelCaseDeep(value) {
-  if (Array.isArray(value)) {
-    return value.map(toCamelCaseDeep);
+function sendLibraryResult(res, result, statusCode = 200) {
+  if (!result.success) {
+    return res.status(500).json({ error: result.error });
   }
 
-  if (value && typeof value === 'object' && value.constructor === Object) {
-    return Object.entries(value).reduce((acc, [key, nestedValue]) => {
-      acc[normalizeResponseKey(key)] = toCamelCaseDeep(nestedValue);
-      return acc;
-    }, {});
-  }
-
-  return value;
+  return res.status(statusCode).json(toCamelCaseDeep(result.data));
 }
 
 /**
@@ -34,12 +20,8 @@ function toCamelCaseDeep(value) {
 router.get('/', async (req, res) => {
   try {
     const result = await BadgesLibrary.getAllBadges();
-    
-    if (result.success) {
-      res.json(toCamelCaseDeep(result.data));
-    } else {
-      res.status(500).json({ error: result.error });
-    }
+
+    sendLibraryResult(res, result);
   } catch (error) {
     console.error('Error in GET /badges:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -54,14 +36,10 @@ router.get('/', async (req, res) => {
 router.get('/user/:profileId', async (req, res) => {
   try {
     const { profileId } = req.params;
-    
+
     const result = await BadgesLibrary.getUserBadges(profileId);
-    
-    if (result.success) {
-      res.json(toCamelCaseDeep(result.data));
-    } else {
-      res.status(500).json({ error: result.error });
-    }
+
+    sendLibraryResult(res, result);
   } catch (error) {
     console.error('Error in GET /badges/user/:profileId:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -76,14 +54,10 @@ router.get('/user/:profileId', async (req, res) => {
 router.get('/user/:profileId/progress', async (req, res) => {
   try {
     const { profileId } = req.params;
-    
+
     const result = await BadgesLibrary.getUserBadgeProgress(profileId);
-    
-    if (result.success) {
-      res.json(toCamelCaseDeep(result.data));
-    } else {
-      res.status(500).json({ error: result.error });
-    }
+
+    sendLibraryResult(res, result);
   } catch (error) {
     console.error('Error in GET /badges/user/:profileId/progress:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -98,14 +72,10 @@ router.get('/user/:profileId/progress', async (req, res) => {
 router.get('/user/:profileId/stats', async (req, res) => {
   try {
     const { profileId } = req.params;
-    
+
     const result = await BadgesLibrary.getUserBadgeStats(profileId);
-    
-    if (result.success) {
-      res.json(toCamelCaseDeep(result.data));
-    } else {
-      res.status(500).json({ error: result.error });
-    }
+
+    sendLibraryResult(res, result);
   } catch (error) {
     console.error('Error in GET /badges/user/:profileId/stats:', error);
     res.status(500).json({ error: 'Internal server error' });
