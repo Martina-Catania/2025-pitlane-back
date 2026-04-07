@@ -154,7 +154,6 @@ describe('Meal Registration and Calorie Progress Integration', () => {
           description: 'Testing meal registration',
           profileId: testProfileId,
           mealId: 2000,
-          portionFraction: 1, // Full meal = 700 kcal
           consumedAt: new Date().toISOString()
         });
 
@@ -180,7 +179,7 @@ describe('Meal Registration and Calorie Progress Integration', () => {
     });
 
     it('should register a second meal and show cumulative calories', async () => {
-      // Register another meal (partial portionFraction)
+      // Register another full meal
       const consumptionRes = await request(app)
         .post('/meal-consumptions/individual')
         .set('Authorization', mockToken)
@@ -189,14 +188,13 @@ describe('Meal Registration and Calorie Progress Integration', () => {
           description: 'Testing second meal registration',
           profileId: testProfileId,
           mealId: 2000,
-          portionFraction: 0.5, // Half meal = 350 kcal
           consumedAt: new Date().toISOString()
         });
 
       expect([201, 401, 403]).toContain(consumptionRes.statusCode);
       
       if (consumptionRes.statusCode === 201) {
-        expect(consumptionRes.body.totalKcal).toBe(350);
+        expect(consumptionRes.body.totalKcal).toBe(700);
       }
 
       // Check cumulative calorie progress
@@ -207,7 +205,7 @@ describe('Meal Registration and Calorie Progress Integration', () => {
       expect([200, 401, 403]).toContain(progressRes.statusCode);
       
       if (progressRes.statusCode === 200) {
-        expect(progressRes.body.consumed).toBe(1050); // 700 + 350 = 1050 kcal
+        expect(progressRes.body.consumed).toBe(1400); // 700 + 700 = 1400 kcal
         expect(progressRes.body.goal).toBe(2000);
       }
     });
@@ -241,7 +239,6 @@ describe('Meal Registration and Calorie Progress Integration', () => {
           profileId: testProfileId,
           groupId: groupRes.GroupID,
           mealId: 2000,
-          portionFraction: 2, // 1400 kcal, but shouldn't count for individual progress
           consumedAt: new Date().toISOString()
         });
 
@@ -255,7 +252,7 @@ describe('Meal Registration and Calorie Progress Integration', () => {
       expect([200, 401, 403]).toContain(progressRes.statusCode);
       
       if (progressRes.statusCode === 200) {
-        expect(progressRes.body.consumed).toBe(1050); // Still 1050, group meal not counted
+        expect(progressRes.body.consumed).toBe(1400); // Still 1400, group meal not counted
         expect(progressRes.body.goal).toBe(2000);
       }
 
@@ -281,13 +278,12 @@ describe('Meal Registration and Calorie Progress Integration', () => {
           description: 'Testing date-specific progress',
           profileId: testProfileId,
           mealId: 2000,
-          portionFraction: 1, // 700 kcal
           consumedAt: yesterday.toISOString()
         });
 
       expect([201, 401, 403]).toContain(yesterdayConsumptionRes.statusCode);
 
-      // Check today's progress (should still be 1050)
+      // Check today's progress (should still be 1400)
       const todayProgressRes = await request(app)
         .get(`/profile/${testProfileId}/calorie-progress`)
         .set('Authorization', mockToken);
@@ -295,7 +291,7 @@ describe('Meal Registration and Calorie Progress Integration', () => {
       expect([200, 401, 403]).toContain(todayProgressRes.statusCode);
       
       if (todayProgressRes.statusCode === 200) {
-        expect(todayProgressRes.body.consumed).toBe(1050); // Today's total unchanged
+        expect(todayProgressRes.body.consumed).toBe(1400); // Today's total unchanged
       }
 
       // Check yesterday's progress (should be 700)

@@ -271,6 +271,16 @@ class BadgesLibrary {
           }
           break;
 
+        case 'planned_meal_created':
+          const mealPlanningBadge = await prisma.badge.findFirst({
+            where: { badgeType: 'meal_planning', isActive: true }
+          });
+          if (mealPlanningBadge) {
+            const result = await this.awardBadge(profileId, mealPlanningBadge.BadgeID, 1);
+            results.push(result);
+          }
+          break;
+
         case 'voting_participated':
           const votingParticipantBadge = await prisma.badge.findFirst({
             where: { badgeType: 'voting_participation', isActive: true }
@@ -451,6 +461,20 @@ class BadgesLibrary {
         }
       }
 
+      // Check for planned meal creation badge
+      const plannedMealsCreated = await prisma.plannedMeal.count({
+        where: { profileId: profileId }
+      });
+      if (plannedMealsCreated > 0) {
+        const plannedMealBadge = await prisma.badge.findFirst({
+          where: { badgeType: 'meal_planning', isActive: true }
+        });
+        if (plannedMealBadge) {
+          const result = await this.awardBadge(profileId, plannedMealBadge.BadgeID, plannedMealsCreated);
+          results.push({ action: 'planned_meal_created', count: plannedMealsCreated, result });
+        }
+      }
+
       // Check for voting participation badge
       const votesParticipated = await prisma.votingSessionParticipant.count({
         where: { 
@@ -503,7 +527,13 @@ class BadgesLibrary {
       return {
         success: true,
         badgeNotifications,
-        summary: { groupsCreated, mealsCreated, votesParticipated, votingSessionsWon: votingSessions }
+        summary: {
+          groupsCreated,
+          mealsCreated,
+          plannedMealsCreated,
+          votesParticipated,
+          votingSessionsWon: votingSessions
+        }
       };
 
     } catch (error) {

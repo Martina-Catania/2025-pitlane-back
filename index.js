@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
@@ -106,8 +108,11 @@ const httpServer = http.createServer(app);
 if (process.env.NODE_ENV !== 'test') {
   // Start voting session scheduler
   const votingLib = require('./controllers/votingLib');
+  const plannedMealsLib = require('./controllers/plannedMealsLib');
   votingLib.startVotingSessionScheduler();
+  plannedMealsLib.startPlannedMealScheduler();
   console.log('✅ Voting session scheduler started');
+  console.log('✅ Planned meal scheduler started');
 
   httpServer.listen(PORT, () => {
     console.log('='.repeat(70));

@@ -14,13 +14,13 @@
     "tsx": "^4.20.5"
   },
   "scripts": {
+    "prestart": "npx prisma generate",
     "start": "node index.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:db:start": "docker-compose -f docker-compose.test.yml up -d",
-    "test:db:stop": "docker-compose -f docker-compose.test.yml down",
-    "test:db:clean": "docker-compose -f docker-compose.test.yml down -v",
+    "test:db:prepare": "npx prisma migrate deploy && npm run seed",
+    "test:db:reset": "npx prisma migrate reset --force",
     "seed": "node prisma/seed.js",
     "migrate-dev": "npx prisma migrate dev && npx tsx prisma/triggers.ts"
   }

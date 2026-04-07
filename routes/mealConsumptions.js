@@ -88,14 +88,13 @@ router.get('/:id', async (req, res) => {
  */
 router.post('/individual', async (req, res) => {
     try {
-        const { name, description, mealId, profileId, consumedAt, portions, portionFraction } = req.body;
+        const { name, description, mealId, profileId, consumedAt } = req.body;
         
         console.log('[POST /meal-consumptions/individual] Received request:', {
             name,
             profileId,
             mealId,
-            hasPortions: !!portions,
-            portionFraction
+            isFullMealOnly: true
         });
         
         if (!profileId || !mealId) {
@@ -104,33 +103,7 @@ router.post('/individual', async (req, res) => {
             });
         }
         
-        // Handle portionFraction in request body
-        // The library expects portions to be an object with portionFraction and foodPortions
-        // If only portionFraction is provided, we need to fetch the meal first
-        let portionsData = portions;
-        if (portionFraction !== undefined && !portions) {
-            // Fetch meal to get food items
-            const { PrismaClient } = require('@prisma/client');
-            const prisma = new PrismaClient();
-            const meal = await prisma.meal.findUnique({
-                where: { MealID: mealId },
-                include: {
-                    mealFoods: true
-                }
-            });
-            
-            if (meal && meal.mealFoods) {
-                portionsData = {
-                    portionFraction: portionFraction,
-                    foodPortions: meal.mealFoods.map(mf => ({
-                        foodId: mf.foodId,
-                        portionFraction: portionFraction
-                    }))
-                };
-            }
-        }
-        
-        const consumptionData = { name, description, mealId, consumedAt, portions: portionsData };
+        const consumptionData = { name, description, mealId, consumedAt };
         const newConsumption = await mealConsumptionsLib.createIndividualMealConsumption(
             consumptionData, 
             profileId
@@ -157,14 +130,14 @@ router.post('/individual', async (req, res) => {
  */
 router.post('/group', async (req, res) => {
     try {
-        const { name, description, mealId, profileId, groupId, consumedAt, portions } = req.body;
+        const { name, description, mealId, profileId, groupId, consumedAt } = req.body;
         
         console.log('[POST /meal-consumptions/group] Received request:', {
             name,
             profileId,
             groupId,
             mealId,
-            hasPortions: !!portions
+            isFullMealOnly: true
         });
         
         if (!profileId || !groupId || !mealId) {
@@ -173,7 +146,7 @@ router.post('/group', async (req, res) => {
             });
         }
         
-        const consumptionData = { name, description, mealId, groupId, consumedAt, portions };
+        const consumptionData = { name, description, mealId, groupId, consumedAt };
         const newConsumption = await mealConsumptionsLib.createGroupMealConsumption(
             consumptionData, 
             profileId

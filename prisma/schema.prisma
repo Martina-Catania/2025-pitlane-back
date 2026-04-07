@@ -20,31 +20,35 @@ enum Role {
 }
 
 model Profile {
-  id                 String               @id @db.Uuid
-  role               Role                 @default(user)
-  username           String?              @unique
-  calorie_goal       Int?                 @default(2000) // Nuevo campo para objetivos de calorías
-  primaryBadgeId     Int?                 // Badge seleccionado por el usuario para mostrar junto a su nombre
-  Preference         Preference[]         @relation("profile_preference")
-  DietaryRestriction DietaryRestriction[] @relation("profile_dietaryrestriction")
-  meals              Meal[]               @relation("profile_meal")
-  foods              Food[]               @relation("profile_food")
-  groupMemberships   GroupMember[]        @relation("profile_groupmember")
-  createdGroups      Group[]              @relation("profile_createdgroup")
-  sentInvitations    GroupInvitation[]    @relation("profile_sentinvitation")
-  receivedInvitations GroupInvitation[]   @relation("profile_receivedinvitation")
-  initiatedVotingSessions VotingSession[] @relation("profile_votingsession")
-  mealProposals      MealProposal[]       @relation("profile_mealproposal")
-  votes              Vote[]               @relation("profile_vote")
-  proposalConfirmations UserProposalConfirmation[] @relation("profile_proposalconfirmation")
-  voteConfirmations  UserVoteConfirmation[] @relation("profile_voteconfirmation")
-  votingParticipations VotingSessionParticipant[] @relation("profile_participant")
-  userBadges       UserBadge[]      @relation("profile_userbadge")
-  primaryBadge     Badge?           @relation("profile_primarybadge", fields: [primaryBadgeId], references: [BadgeID], onDelete: SetNull)
-  hostedGames      GameSession[]    @relation("profile_hostedgame")
-  wonGames         GameSession[]    @relation("profile_wongame")
-  gameParticipations GameParticipant[] @relation("profile_gameparticipant")
-  mealConsumptions MealConsumption[] @relation("profile_mealconsumption")
+  id                       String                     @id @db.Uuid
+  role                     Role                       @default(user)
+  username                 String?                    @unique
+  calorie_goal             Int?                       @default(2000) // Calorie goal target
+  primaryBadgeId           Int? // Badge seleccionado por el usuario para mostrar junto a su nombre
+  Preference               Preference[]               @relation("profile_preference")
+  DietaryRestriction       DietaryRestriction[]       @relation("profile_dietaryrestriction")
+  meals                    Meal[]                     @relation("profile_meal")
+  foods                    Food[]                     @relation("profile_food")
+  groupMemberships         GroupMember[]              @relation("profile_groupmember")
+  createdGroups            Group[]                    @relation("profile_createdgroup")
+  sentInvitations          GroupInvitation[]          @relation("profile_sentinvitation")
+  receivedInvitations      GroupInvitation[]          @relation("profile_receivedinvitation")
+  initiatedVotingSessions  VotingSession[]            @relation("profile_votingsession")
+  mealProposals            MealProposal[]             @relation("profile_mealproposal")
+  votes                    Vote[]                     @relation("profile_vote")
+  proposalConfirmations    UserProposalConfirmation[] @relation("profile_proposalconfirmation")
+  voteConfirmations        UserVoteConfirmation[]     @relation("profile_voteconfirmation")
+  votingParticipations     VotingSessionParticipant[] @relation("profile_participant")
+  userBadges               UserBadge[]                @relation("profile_userbadge")
+  primaryBadge             Badge?                     @relation("profile_primarybadge", fields: [primaryBadgeId], references: [BadgeID], onDelete: SetNull)
+  hostedGames              GameSession[]              @relation("profile_hostedgame")
+  wonGames                 GameSession[]              @relation("profile_wongame")
+  gameParticipations       GameParticipant[]          @relation("profile_gameparticipant")
+  mealConsumptions         MealConsumption[]          @relation("profile_mealconsumption")
+  plannedMeals             PlannedMeal[]              @relation("profile_plannedmeal")
+  plannedMealConfirmations PlannedMealConfirmation[]  @relation("profile_plannedmealconfirmation")
+  plannedMealPurchases     PlannedMealFood[]          @relation("profile_plannedmealfoodpurchase")
+  plannedMealResolutions   PlannedMeal[]              @relation("profile_plannedmealresolution")
 
   @@map("profile")
 }
@@ -61,6 +65,7 @@ model Food {
   preferences         Preference[]         @relation("preference_food")
   mealFoods           MealFood[]           @relation("food_mealfood")
   foodPortions        FoodPortion[]        @relation("food_foodportion")
+  plannedMealFoods    PlannedMealFood[]    @relation("food_plannedmealfood")
 
   @@map("food")
 }
@@ -84,30 +89,31 @@ model DietaryRestriction {
 }
 
 model Meal {
-  MealID      Int        @id @default(autoincrement())
-  name        String
-  description String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  profileId   String     @db.Uuid
-  profile             Profile              @relation("profile_meal", fields: [profileId], references: [id], onDelete: Cascade)
-  mealFoods   MealFood[] @relation("meal_mealfood")
-  votingSessionsWon VotingSession[] @relation("meal_votingsession")
-  mealProposals MealProposal[] @relation("meal_mealproposal")
-  mealConsumptions MealConsumption[] @relation("meal_mealconsumption")
-  gameProposals GameParticipant[] @relation("meal_gameproposal")
-  gameSessionsWon GameSession[] @relation("meal_gamewinner")
+  MealID            Int               @id @default(autoincrement())
+  name              String
+  description       String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  profileId         String            @db.Uuid
+  profile           Profile           @relation("profile_meal", fields: [profileId], references: [id], onDelete: Cascade)
+  mealFoods         MealFood[]        @relation("meal_mealfood")
+  votingSessionsWon VotingSession[]   @relation("meal_votingsession")
+  mealProposals     MealProposal[]    @relation("meal_mealproposal")
+  mealConsumptions  MealConsumption[] @relation("meal_mealconsumption")
+  gameProposals     GameParticipant[] @relation("meal_gameproposal")
+  gameSessionsWon   GameSession[]     @relation("meal_gamewinner")
+  plannedMeals      PlannedMeal[]     @relation("meal_plannedmeal")
 
   @@map("meal")
 }
 
 model MealFood {
-  MealFoodID Int   @id @default(autoincrement())
+  MealFoodID Int  @id @default(autoincrement())
   mealId     Int
   foodId     Int
-  quantity   Int   @default(1) // number of units of this food in the meal
-  meal       Meal  @relation("meal_mealfood", fields: [mealId], references: [MealID], onDelete: Cascade)
-  food       Food  @relation("food_mealfood", fields: [foodId], references: [FoodID], onDelete: Cascade)
+  quantity   Int  @default(1) // number of units of this food in the meal
+  meal       Meal @relation("meal_mealfood", fields: [mealId], references: [MealID], onDelete: Cascade)
+  food       Food @relation("food_mealfood", fields: [foodId], references: [FoodID], onDelete: Cascade)
 
   @@unique([mealId, foodId]) // prevents duplicate food entries in the same meal
   @@map("mealfood")
@@ -131,38 +137,47 @@ enum InvitationStatus {
 }
 
 enum VotingSessionStatus {
-  proposal_phase    // Users can propose meals (first 5 minutes)
-  voting_phase     // Users vote on proposed meals
-  completed        // Voting finished, winner selected
-  cancelled        // Session was cancelled
+  proposal_phase // Users can propose meals (first 5 minutes)
+  voting_phase // Users vote on proposed meals
+  completed // Voting finished, winner selected
+  cancelled // Session was cancelled
 }
 
 enum VoteType {
-  up    // Vote for the meal
-  down  // Vote against the meal (optional)
+  up // Vote for the meal
+  down // Vote against the meal (optional)
 }
 
 enum ConsumptionSource {
-  individual  // Manually logged individual consumption
-  voting      // From a voting session
-  game        // From a game session
-  group       // Group meal consumption
+  individual // Manually logged individual consumption
+  voting // From a voting session
+  game // From a game session
+  group // Group meal consumption
+}
+
+enum PlannedMealStatus {
+  scheduled
+  awaiting_confirmation
+  consumed
+  rescheduled
+  cancelled
 }
 
 model Group {
-  GroupID     Int           @id @default(autoincrement())
-  name        String
-  description String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  createdBy   String        @db.Uuid
-  isActive    Boolean       @default(true) // for soft deletion
-  creator     Profile       @relation("profile_createdgroup", fields: [createdBy], references: [id], onDelete: Cascade)
-  members     GroupMember[] @relation("group_groupmember")
-  invitations GroupInvitation[] @relation("group_invitation")
-  votingSessions VotingSession[] @relation("group_votingsession")
-  gameSessions GameSession[] @relation("group_gamesession")
+  GroupID          Int               @id @default(autoincrement())
+  name             String
+  description      String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  createdBy        String            @db.Uuid
+  isActive         Boolean           @default(true) // for soft deletion
+  creator          Profile           @relation("profile_createdgroup", fields: [createdBy], references: [id], onDelete: Cascade)
+  members          GroupMember[]     @relation("group_groupmember")
+  invitations      GroupInvitation[] @relation("group_invitation")
+  votingSessions   VotingSession[]   @relation("group_votingsession")
+  gameSessions     GameSession[]     @relation("group_gamesession")
   mealConsumptions MealConsumption[] @relation("group_mealconsumption")
+  plannedMeals     PlannedMeal[]     @relation("group_plannedmeal")
 
   @@map("group")
 }
@@ -182,18 +197,18 @@ model GroupMember {
 }
 
 model GroupInvitation {
-  InvitationID    Int              @id @default(autoincrement())
-  groupId         Int
-  invitedById     String           @db.Uuid // who sent the invitation
-  invitedUserId   String           @db.Uuid // who received the invitation
-  status          InvitationStatus @default(pending)
-  message         String?          // optional invitation message
-  createdAt       DateTime         @default(now())
-  respondedAt     DateTime?        // when the invitation was accepted/rejected
-  expiresAt       DateTime?        // optional expiration date
-  group           Group            @relation("group_invitation", fields: [groupId], references: [GroupID], onDelete: Cascade)
-  invitedBy       Profile          @relation("profile_sentinvitation", fields: [invitedById], references: [id], onDelete: Cascade)
-  invitedUser     Profile          @relation("profile_receivedinvitation", fields: [invitedUserId], references: [id], onDelete: Cascade)
+  InvitationID  Int              @id @default(autoincrement())
+  groupId       Int
+  invitedById   String           @db.Uuid // who sent the invitation
+  invitedUserId String           @db.Uuid // who received the invitation
+  status        InvitationStatus @default(pending)
+  message       String? // optional invitation message
+  createdAt     DateTime         @default(now())
+  respondedAt   DateTime? // when the invitation was accepted/rejected
+  expiresAt     DateTime? // optional expiration date
+  group         Group            @relation("group_invitation", fields: [groupId], references: [GroupID], onDelete: Cascade)
+  invitedBy     Profile          @relation("profile_sentinvitation", fields: [invitedById], references: [id], onDelete: Cascade)
+  invitedUser   Profile          @relation("profile_receivedinvitation", fields: [invitedUserId], references: [id], onDelete: Cascade)
 
   @@unique([groupId, invitedUserId]) // prevents duplicate invitations for same group/user
   @@map("groupinvitation")
@@ -201,28 +216,28 @@ model GroupInvitation {
 
 // Voting System Models
 model VotingSession {
-  VotingSessionID Int                  @id @default(autoincrement())
-  groupId         Int
-  initiatorId     String               @db.Uuid // who started the voting session
-  status          VotingSessionStatus  @default(proposal_phase)
-  title           String?              // optional title for the voting session
-  description     String?              // optional description
-  createdAt       DateTime             @default(now())
-  proposalEndsAt  DateTime             // when proposal phase ends (5 minutes after creation)
-  votingEndsAt    DateTime?            // when voting phase ends (set when voting starts)
-  completedAt     DateTime?            // when session was completed
-  winnerMealId    Int?                 // the winning meal (if any)
-  totalVotes      Int                  @default(0) // total number of votes cast
-  group           Group                @relation("group_votingsession", fields: [groupId], references: [GroupID], onDelete: Cascade)
-  initiator       Profile              @relation("profile_votingsession", fields: [initiatorId], references: [id], onDelete: Cascade)
-  winnerMeal      Meal?                @relation("meal_votingsession", fields: [winnerMealId], references: [MealID], onDelete: SetNull)
-  proposals       MealProposal[]       @relation("votingsession_mealproposal")
-  votes           Vote[]               @relation("votingsession_vote")
+  VotingSessionID       Int                        @id @default(autoincrement())
+  groupId               Int
+  initiatorId           String                     @db.Uuid // who started the voting session
+  status                VotingSessionStatus        @default(proposal_phase)
+  title                 String? // optional title for the voting session
+  description           String? // optional description
+  createdAt             DateTime                   @default(now())
+  proposalEndsAt        DateTime // when proposal phase ends (5 minutes after creation)
+  votingEndsAt          DateTime? // when voting phase ends (set when voting starts)
+  completedAt           DateTime? // when session was completed
+  winnerMealId          Int? // the winning meal (if any)
+  totalVotes            Int                        @default(0) // total number of votes cast
+  group                 Group                      @relation("group_votingsession", fields: [groupId], references: [GroupID], onDelete: Cascade)
+  initiator             Profile                    @relation("profile_votingsession", fields: [initiatorId], references: [id], onDelete: Cascade)
+  winnerMeal            Meal?                      @relation("meal_votingsession", fields: [winnerMealId], references: [MealID], onDelete: SetNull)
+  proposals             MealProposal[]             @relation("votingsession_mealproposal")
+  votes                 Vote[]                     @relation("votingsession_vote")
   proposalConfirmations UserProposalConfirmation[] @relation("votingsession_proposalconfirmation")
-  voteConfirmations UserVoteConfirmation[] @relation("votingsession_voteconfirmation")
-  participants    VotingSessionParticipant[] @relation("votingsession_participant")
-  mealConsumptions MealConsumption[]          @relation("votingsession_mealconsumption")
-  
+  voteConfirmations     UserVoteConfirmation[]     @relation("votingsession_voteconfirmation")
+  participants          VotingSessionParticipant[] @relation("votingsession_participant")
+  mealConsumptions      MealConsumption[]          @relation("votingsession_mealconsumption")
+
   @@map("votingsession")
 }
 
@@ -238,7 +253,7 @@ model MealProposal {
   meal            Meal          @relation("meal_mealproposal", fields: [mealId], references: [MealID], onDelete: Cascade)
   proposedBy      Profile       @relation("profile_mealproposal", fields: [proposedById], references: [id], onDelete: Cascade)
   votes           Vote[]        @relation("mealproposal_vote")
-  
+
   @@unique([votingSessionId, mealId]) // prevents duplicate meal proposals in same session
   @@map("mealproposal")
 }
@@ -254,7 +269,7 @@ model Vote {
   votingSession   VotingSession @relation("votingsession_vote", fields: [votingSessionId], references: [VotingSessionID], onDelete: Cascade)
   mealProposal    MealProposal  @relation("mealproposal_vote", fields: [mealProposalId], references: [MealProposalID], onDelete: Cascade)
   voter           Profile       @relation("profile_vote", fields: [voterId], references: [id], onDelete: Cascade)
-  
+
   @@unique([mealProposalId, voterId]) // one vote per user per meal proposal
   @@map("vote")
 }
@@ -267,7 +282,7 @@ model UserProposalConfirmation {
   confirmedAt                DateTime      @default(now())
   votingSession              VotingSession @relation("votingsession_proposalconfirmation", fields: [votingSessionId], references: [VotingSessionID], onDelete: Cascade)
   user                       Profile       @relation("profile_proposalconfirmation", fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@unique([votingSessionId, userId]) // one confirmation per user per voting session
   @@map("userproposalconfirmation")
 }
@@ -279,82 +294,148 @@ model UserVoteConfirmation {
   confirmedAt            DateTime      @default(now())
   votingSession          VotingSession @relation("votingsession_voteconfirmation", fields: [votingSessionId], references: [VotingSessionID], onDelete: Cascade)
   user                   Profile       @relation("profile_voteconfirmation", fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@unique([votingSessionId, userId]) // one confirmation per user per voting session
   @@map("uservoteconfirmation")
 }
 
 // Meal Portion Tracking - tracks who participated and what portion they consumed
 model VotingSessionParticipant {
-  ParticipantID       Int                        @id @default(autoincrement())
-  votingSessionId     Int
-  userId              String                     @db.Uuid
-  joinedAt            DateTime                   @default(now()) // when they joined the session
-  portionDeadline     DateTime                   // 15 minutes after session completion
-  hasSelectedPortion  Boolean                    @default(false) // whether user selected their portion
-  selectedAt          DateTime?                  // when they selected their portion
-  defaultedToWhole    Boolean                    @default(false) // true if defaulted to whole meal after deadline
-  votingSession       VotingSession              @relation("votingsession_participant", fields: [votingSessionId], references: [VotingSessionID], onDelete: Cascade)
-  user                Profile                    @relation("profile_participant", fields: [userId], references: [id], onDelete: Cascade)
-  
+  ParticipantID      Int           @id @default(autoincrement())
+  votingSessionId    Int
+  userId             String        @db.Uuid
+  joinedAt           DateTime      @default(now()) // when they joined the session
+  portionDeadline    DateTime // 15 minutes after session completion
+  hasSelectedPortion Boolean       @default(false) // whether user selected their portion
+  selectedAt         DateTime? // when they selected their portion
+  defaultedToWhole   Boolean       @default(false) // true if defaulted to whole meal after deadline
+  votingSession      VotingSession @relation("votingsession_participant", fields: [votingSessionId], references: [VotingSessionID], onDelete: Cascade)
+  user               Profile       @relation("profile_participant", fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([votingSessionId, userId]) // one participant entry per user per session
   @@map("votingsessionparticipant")
 }
 
 // Universal meal consumption table - tracks ALL meal consumptions (individual, voting, game, group)
 model MealConsumption {
-  MealConsumptionID   Int                        @id @default(autoincrement())
-  name                String                     // Name/title of consumption
-  description         String?                    // Optional description
-  profileId           String                     @db.Uuid // who consumed/recorded this meal (required)
-  mealId              Int                        // which meal was consumed
-  groupId             Int?                       // null for individual consumptions, set for group consumptions
-  type                ConsumptionType            @default(individual) // individual or group (defines scope)
-  source              ConsumptionSource          @default(individual) // where this consumption came from
-  votingSessionId     Int?                       // if from voting, which session
-  gameSessionId       Int?                       // if from game, which game session
-  portionFraction     Float                      @default(1.0) // 1.0 = whole, 0.5 = half, 0.25 = quarter, etc.
-  quantity            Int                        @default(1) // number of servings consumed
-  totalKcal           Int                        @default(0) @db.Integer // total calories for this consumption
-  consumedAt          DateTime                   @default(now()) // when the consumption actually happened
-  recordedAt          DateTime                   @default(now()) // when it was recorded in the system
-  createdAt           DateTime                   @default(now())
-  isActive            Boolean                    @default(true) // for soft deletion
-  profile             Profile                    @relation("profile_mealconsumption", fields: [profileId], references: [id], onDelete: Cascade)
-  meal                Meal                       @relation("meal_mealconsumption", fields: [mealId], references: [MealID], onDelete: Cascade)
-  group               Group?                     @relation("group_mealconsumption", fields: [groupId], references: [GroupID], onDelete: SetNull)
-  votingSession       VotingSession?             @relation("votingsession_mealconsumption", fields: [votingSessionId], references: [VotingSessionID], onDelete: SetNull)
-  gameSession         GameSession?               @relation("gamesession_mealconsumption", fields: [gameSessionId], references: [GameSessionID], onDelete: SetNull)
-  foodPortions        FoodPortion[]              @relation("mealconsumption_foodportion")
-  
+  MealConsumptionID Int               @id @default(autoincrement())
+  name              String // Name/title of consumption
+  description       String? // Optional description
+  profileId         String            @db.Uuid // who consumed/recorded this meal (required)
+  mealId            Int // which meal was consumed
+  groupId           Int? // null for individual consumptions, set for group consumptions
+  type              ConsumptionType   @default(individual) // individual or group (defines scope)
+  source            ConsumptionSource @default(individual) // where this consumption came from
+  votingSessionId   Int? // if from voting, which session
+  gameSessionId     Int? // if from game, which game session
+  portionFraction   Float             @default(1.0) // 1.0 = whole, 0.5 = half, 0.25 = quarter, etc.
+  quantity          Int               @default(1) // number of servings consumed
+  totalKcal         Int               @default(0) @db.Integer // total calories for this consumption
+  consumedAt        DateTime          @default(now()) // when the consumption actually happened
+  recordedAt        DateTime          @default(now()) // when it was recorded in the system
+  createdAt         DateTime          @default(now())
+  isActive          Boolean           @default(true) // for soft deletion
+  profile           Profile           @relation("profile_mealconsumption", fields: [profileId], references: [id], onDelete: Cascade)
+  meal              Meal              @relation("meal_mealconsumption", fields: [mealId], references: [MealID], onDelete: Cascade)
+  group             Group?            @relation("group_mealconsumption", fields: [groupId], references: [GroupID], onDelete: SetNull)
+  votingSession     VotingSession?    @relation("votingsession_mealconsumption", fields: [votingSessionId], references: [VotingSessionID], onDelete: SetNull)
+  gameSession       GameSession?      @relation("gamesession_mealconsumption", fields: [gameSessionId], references: [GameSessionID], onDelete: SetNull)
+  foodPortions      FoodPortion[]     @relation("mealconsumption_foodportion")
+  plannedMeals      PlannedMeal[]     @relation("mealconsumption_plannedmeal")
+
   @@map("mealconsumption")
+}
+
+model PlannedMeal {
+  PlannedMealID   Int                       @id @default(autoincrement())
+  profileId       String                    @db.Uuid
+  groupId         Int?
+  mealId          Int
+  consumptionId   Int?
+  plannedFor      DateTime
+  status          PlannedMealStatus         @default(scheduled)
+  estimatedKcal   Int                       @default(0) @db.Integer
+  resolvedAt      DateTime?
+  resolutionNote  String?
+  resolvedById    String?                   @db.Uuid
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+  isActive        Boolean                   @default(true)
+  profile         Profile                   @relation("profile_plannedmeal", fields: [profileId], references: [id], onDelete: Cascade)
+  group           Group?                    @relation("group_plannedmeal", fields: [groupId], references: [GroupID], onDelete: SetNull)
+  meal            Meal                      @relation("meal_plannedmeal", fields: [mealId], references: [MealID], onDelete: Cascade)
+  mealConsumption MealConsumption?          @relation("mealconsumption_plannedmeal", fields: [consumptionId], references: [MealConsumptionID], onDelete: SetNull)
+  resolvedBy      Profile?                  @relation("profile_plannedmealresolution", fields: [resolvedById], references: [id], onDelete: SetNull)
+  foodItems       PlannedMealFood[]         @relation("plannedmeal_fooditems")
+  confirmations   PlannedMealConfirmation[] @relation("plannedmeal_confirmation")
+
+  @@index([profileId, plannedFor, status])
+  @@index([groupId, plannedFor, status])
+  @@index([plannedFor, status])
+  @@map("plannedmeal")
+}
+
+model PlannedMealFood {
+  PlannedMealFoodID Int         @id @default(autoincrement())
+  plannedMealId     Int
+  foodId            Int
+  quantity          Int         @default(1)
+  isPurchased       Boolean     @default(false)
+  purchasedAt       DateTime?
+  purchasedById     String?     @db.Uuid
+  isActive          Boolean     @default(true)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  plannedMeal       PlannedMeal @relation("plannedmeal_fooditems", fields: [plannedMealId], references: [PlannedMealID], onDelete: Cascade)
+  food              Food        @relation("food_plannedmealfood", fields: [foodId], references: [FoodID], onDelete: Cascade)
+  purchasedBy       Profile?    @relation("profile_plannedmealfoodpurchase", fields: [purchasedById], references: [id], onDelete: SetNull)
+
+  @@unique([plannedMealId, foodId])
+  @@index([foodId, isActive, isPurchased])
+  @@map("plannedmealfood")
+}
+
+model PlannedMealConfirmation {
+  PlannedMealConfirmationID Int               @id @default(autoincrement())
+  plannedMealId             Int
+  userId                    String            @db.Uuid
+  wasConsumed               Boolean
+  action                    PlannedMealStatus
+  confirmedAt               DateTime          @default(now())
+  note                      String?
+  plannedMeal               PlannedMeal       @relation("plannedmeal_confirmation", fields: [plannedMealId], references: [PlannedMealID], onDelete: Cascade)
+  user                      Profile           @relation("profile_plannedmealconfirmation", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([plannedMealId, confirmedAt])
+  @@map("plannedmealconfirmation")
 }
 
 // Tracks what portion of each food/ingredient the participant consumed
 model FoodPortion {
-  FoodPortionID      Int              @id @default(autoincrement())
-  mealConsumptionId  Int
-  foodId             Int
-  portionFraction    Float            @default(1.0) // what fraction of this specific food they consumed
-  quantityConsumed   Float            // calculated: original quantity * portionFraction
-  createdAt          DateTime         @default(now())
-  mealConsumption    MealConsumption  @relation("mealconsumption_foodportion", fields: [mealConsumptionId], references: [MealConsumptionID], onDelete: Cascade)
-  food               Food             @relation("food_foodportion", fields: [foodId], references: [FoodID], onDelete: Cascade)
-  
+  FoodPortionID     Int             @id @default(autoincrement())
+  mealConsumptionId Int
+  foodId            Int
+  portionFraction   Float           @default(1.0) // what fraction of this specific food they consumed
+  quantityConsumed  Float // calculated: original quantity * portionFraction
+  createdAt         DateTime        @default(now())
+  mealConsumption   MealConsumption @relation("mealconsumption_foodportion", fields: [mealConsumptionId], references: [MealConsumptionID], onDelete: Cascade)
+  food              Food            @relation("food_foodportion", fields: [foodId], references: [FoodID], onDelete: Cascade)
+
   @@unique([mealConsumptionId, foodId]) // one food portion per meal consumption per food
   @@map("foodportion")
 }
 
 // Badge System Models
 enum BadgeType {
-  group_creation        // For creating groups
-  voting_participation  // For participating in voting sessions
-  voting_winner         // For winning voting sessions
-  meal_creation         // For creating/uploading meals
-  consumption_tracking  // For tracking individual consumptions
-  social_engagement     // For social activities
-  game_clicker_winner   // For winning Egg Clicker games
-  game_roulette_winner  // For winning roulette games
+  group_creation // For creating groups
+  voting_participation // For participating in voting sessions
+  voting_winner // For winning voting sessions
+  meal_creation // For creating/uploading meals
+  meal_planning // For planning meals in advance
+  consumption_tracking // For tracking individual consumptions
+  social_engagement // For social activities
+  game_clicker_winner // For winning Egg Clicker games
+  game_roulette_winner // For winning roulette games
 }
 
 enum BadgeLevel {
@@ -365,17 +446,17 @@ enum BadgeLevel {
 }
 
 model Badge {
-  BadgeID     Int         @id @default(autoincrement())
-  name        String      @unique
-  description String
-  badgeType   BadgeType
-  iconUrl     String?     // Optional URL to badge icon
-  isActive    Boolean     @default(true) // for soft deletion
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  userBadges  UserBadge[] @relation("badge_userbadge")
-  primaryForUsers Profile[] @relation("profile_primarybadge")
-  requirements BadgeRequirement[] @relation("badge_requirement")
+  BadgeID         Int                @id @default(autoincrement())
+  name            String             @unique
+  description     String
+  badgeType       BadgeType
+  iconUrl         String? // Optional URL to badge icon
+  isActive        Boolean            @default(true) // for soft deletion
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  userBadges      UserBadge[]        @relation("badge_userbadge")
+  primaryForUsers Profile[]          @relation("profile_primarybadge")
+  requirements    BadgeRequirement[] @relation("badge_requirement")
 
   @@map("badge")
 }
@@ -384,8 +465,8 @@ model BadgeRequirement {
   BadgeRequirementID Int        @id @default(autoincrement())
   badgeId            Int
   level              BadgeLevel
-  requiredCount      Int        // Number of actions required for this level
-  description        String     // Description of requirement (e.g., "Participate in 10 voting sessions")
+  requiredCount      Int // Number of actions required for this level
+  description        String // Description of requirement (e.g., "Participate in 10 voting sessions")
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
   badge              Badge      @relation("badge_requirement", fields: [badgeId], references: [BadgeID], onDelete: Cascade)
@@ -400,7 +481,7 @@ model UserBadge {
   badgeId      Int
   currentLevel BadgeLevel @default(bronze) // Current level of the badge
   earnedAt     DateTime   @default(now()) // When the badge was first earned (bronze level)
-  lastUpgraded DateTime?  // When the badge was last upgraded to a new level
+  lastUpgraded DateTime? // When the badge was last upgraded to a new level
   progress     Int        @default(0) // Current progress count (e.g., number of voting sessions)
   isCompleted  Boolean    @default(false) // Whether reached diamond level (max level)
   profile      Profile    @relation("profile_userbadge", fields: [profileId], references: [id], onDelete: Cascade)
@@ -416,54 +497,54 @@ enum GameType {
 }
 
 enum GameStatus {
-  waiting    // Waiting for players to join
-  ready      // All players ready, waiting for host to start
-  countdown  // Countdown in progress (3,2,1)
-  playing    // Game in progress
+  waiting // Waiting for players to join
+  ready // All players ready, waiting for host to start
+  countdown // Countdown in progress (3,2,1)
+  playing // Game in progress
   submitting // Time's up, waiting for all click data
-  completed  // Game finished, winner determined
-  cancelled  // Game was cancelled
+  completed // Game finished, winner determined
+  cancelled // Game was cancelled
 }
 
 model GameSession {
-  GameSessionID   Int       @id @default(autoincrement())
-  groupId         Int
-  gameType        GameType
-  status          GameStatus @default(waiting)
-  hostId          String    @db.Uuid // Profile who initiated the game
-  duration        Int       @default(30) // Game duration in seconds
-  minPlayers      Int       @default(1) // Minimum players required to start (configurable for testing)
-  startTime       DateTime? // When countdown finished and game actually started
-  endTime         DateTime? // When game time expired
-  winnerId        String?   @db.Uuid // Winner's profile ID
-  winningMealId   Int?      // Winner's meal proposal
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  group           Group     @relation("group_gamesession", fields: [groupId], references: [GroupID], onDelete: Cascade)
-  host            Profile   @relation("profile_hostedgame", fields: [hostId], references: [id], onDelete: Cascade)
-  winner          Profile?  @relation("profile_wongame", fields: [winnerId], references: [id], onDelete: SetNull)
-  winningMeal     Meal?     @relation("meal_gamewinner", fields: [winningMealId], references: [MealID], onDelete: SetNull)
-  participants    GameParticipant[] @relation("gamesession_participant")
+  GameSessionID Int        @id @default(autoincrement())
+  groupId       Int
+  gameType      GameType
+  status        GameStatus @default(waiting)
+  hostId        String     @db.Uuid // Profile who initiated the game
+  duration      Int        @default(30) // Game duration in seconds
+  minPlayers    Int        @default(1) // Minimum players required to start (configurable for testing)
+  startTime     DateTime? // When countdown finished and game actually started
+  endTime       DateTime? // When game time expired
+  winnerId      String?    @db.Uuid // Winner's profile ID
+  winningMealId Int? // Winner's meal proposal
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  group            Group             @relation("group_gamesession", fields: [groupId], references: [GroupID], onDelete: Cascade)
+  host             Profile           @relation("profile_hostedgame", fields: [hostId], references: [id], onDelete: Cascade)
+  winner           Profile?          @relation("profile_wongame", fields: [winnerId], references: [id], onDelete: SetNull)
+  winningMeal      Meal?             @relation("meal_gamewinner", fields: [winningMealId], references: [MealID], onDelete: SetNull)
+  participants     GameParticipant[] @relation("gamesession_participant")
   mealConsumptions MealConsumption[] @relation("gamesession_mealconsumption")
 
   @@map("gamesession")
 }
 
 model GameParticipant {
-  GameParticipantID Int           @id @default(autoincrement())
+  GameParticipantID Int       @id @default(autoincrement())
   gameSessionId     Int
-  profileId         String        @db.Uuid
-  mealId            Int?          // Meal proposed by this participant
-  clickCount        Int           @default(0) // Number of clicks/taps
-  isReady           Boolean       @default(false) // Ready to start
-  hasSubmitted      Boolean       @default(false) // Has submitted final click count
-  joinedAt          DateTime      @default(now())
-  submittedAt       DateTime?     // When click data was submitted
-  
-  gameSession       GameSession   @relation("gamesession_participant", fields: [gameSessionId], references: [GameSessionID], onDelete: Cascade)
-  profile           Profile       @relation("profile_gameparticipant", fields: [profileId], references: [id], onDelete: Cascade)
-  meal              Meal?         @relation("meal_gameproposal", fields: [mealId], references: [MealID], onDelete: SetNull)
+  profileId         String    @db.Uuid
+  mealId            Int? // Meal proposed by this participant
+  clickCount        Int       @default(0) // Number of clicks/taps
+  isReady           Boolean   @default(false) // Ready to start
+  hasSubmitted      Boolean   @default(false) // Has submitted final click count
+  joinedAt          DateTime  @default(now())
+  submittedAt       DateTime? // When click data was submitted
+
+  gameSession GameSession @relation("gamesession_participant", fields: [gameSessionId], references: [GameSessionID], onDelete: Cascade)
+  profile     Profile     @relation("profile_gameparticipant", fields: [profileId], references: [id], onDelete: Cascade)
+  meal        Meal?       @relation("meal_gameproposal", fields: [mealId], references: [MealID], onDelete: SetNull)
 
   @@unique([gameSessionId, profileId]) // One entry per player per game
   @@map("gameparticipant")

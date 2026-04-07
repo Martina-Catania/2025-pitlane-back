@@ -33,7 +33,7 @@ describe('Badges API', () => {
       
       if (response.body.length == 0) expect(badge).toBeUndefined();
       else {
-      expect(badge).toHaveProperty('BadgeID');
+      expect(badge).toHaveProperty('badgeId');
       expect(badge).toHaveProperty('name');
       expect(badge).toHaveProperty('description');
       expect(badge).toHaveProperty('badgeType');
@@ -124,6 +124,20 @@ describe('Badges API', () => {
 
       expect(response.body).toHaveProperty('success');
     });
+
+    it('should track badge progress for planned meal creation', async () => {
+      const trackData = {
+        profileId: testProfile.id,
+        action: 'planned_meal_created'
+      };
+
+      const response = await request(app)
+        .post('/badges/track')
+        .send(trackData)
+        .expect(200);
+
+      expect(response.body).toHaveProperty('success');
+    });
   });
 
   describe('PUT /badges/user/:profileId/primary', () => {
@@ -185,7 +199,7 @@ describe('Badges API', () => {
       // Verify badge structure
       if (response.body.length > 0) {
         const badge = response.body[0];
-        expect(badge).toHaveProperty('BadgeID');
+        expect(badge).toHaveProperty('badgeId');
         expect(badge).toHaveProperty('currentLevel');
         expect(badge).toHaveProperty('progress');
       }

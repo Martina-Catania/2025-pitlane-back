@@ -1,7 +1,16 @@
 const express = require('express');
 const BadgesLibrary = require('../controllers/badgesLib');
 const { prisma } = require('../config/prismaClient');
+const { toCamelCaseDeep } = require('../utils/caseTransform');
 const router = express.Router();
+
+function sendLibraryResult(res, result, statusCode = 200) {
+  if (!result.success) {
+    return res.status(500).json({ error: result.error });
+  }
+
+  return res.status(statusCode).json(toCamelCaseDeep(result.data));
+}
 
 /**
  * @route GET /badges
@@ -11,12 +20,8 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const result = await BadgesLibrary.getAllBadges();
-    
-    if (result.success) {
-      res.json(result.data);
-    } else {
-      res.status(500).json({ error: result.error });
-    }
+
+    sendLibraryResult(res, result);
   } catch (error) {
     console.error('Error in GET /badges:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -31,14 +36,10 @@ router.get('/', async (req, res) => {
 router.get('/user/:profileId', async (req, res) => {
   try {
     const { profileId } = req.params;
-    
+
     const result = await BadgesLibrary.getUserBadges(profileId);
-    
-    if (result.success) {
-      res.json(result.data);
-    } else {
-      res.status(500).json({ error: result.error });
-    }
+
+    sendLibraryResult(res, result);
   } catch (error) {
     console.error('Error in GET /badges/user/:profileId:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -53,14 +54,10 @@ router.get('/user/:profileId', async (req, res) => {
 router.get('/user/:profileId/progress', async (req, res) => {
   try {
     const { profileId } = req.params;
-    
+
     const result = await BadgesLibrary.getUserBadgeProgress(profileId);
-    
-    if (result.success) {
-      res.json(result.data);
-    } else {
-      res.status(500).json({ error: result.error });
-    }
+
+    sendLibraryResult(res, result);
   } catch (error) {
     console.error('Error in GET /badges/user/:profileId/progress:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -75,14 +72,10 @@ router.get('/user/:profileId/progress', async (req, res) => {
 router.get('/user/:profileId/stats', async (req, res) => {
   try {
     const { profileId } = req.params;
-    
+
     const result = await BadgesLibrary.getUserBadgeStats(profileId);
-    
-    if (result.success) {
-      res.json(result.data);
-    } else {
-      res.status(500).json({ error: result.error });
-    }
+
+    sendLibraryResult(res, result);
   } catch (error) {
     console.error('Error in GET /badges/user/:profileId/stats:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -109,7 +102,7 @@ router.post('/award', async (req, res) => {
       res.json({
         message: result.alreadyCompleted ? 'Badge already completed' : 
                  result.newlyCompleted ? 'Badge awarded successfully!' : 'Progress updated',
-        badge: result.data.badge,
+        badge: toCamelCaseDeep(result.data.badge),
         progress: result.data.progress,
         maxProgress: result.data.maxProgress,
         isCompleted: result.data.isCompleted,
@@ -145,7 +138,7 @@ router.post('/check', async (req, res) => {
         message: result.badgeNotifications.length > 0 ? 
                  `Congratulations! You earned ${result.badgeNotifications.length} badge achievement(s)!` : 
                  'No new badges earned',
-        badgeNotifications: result.badgeNotifications,
+        badgeNotifications: toCamelCaseDeep(result.badgeNotifications),
         totalResults: result.allResults.length
       });
     } else {
@@ -200,6 +193,16 @@ router.post('/award-retroactive/:profileId', async (req, res) => {
       results.push({ action: 'meal_created', count: mealsCreated, result: mealBadgeResult });
     }
 
+    // Check for planned meal creation badge
+    const plannedMealsCreated = await prisma.plannedMeal.count({
+      where: { profileId: profileId }
+    });
+    console.log(`User created ${plannedMealsCreated} planned meals`);
+    if (plannedMealsCreated > 0) {
+      const plannedMealBadgeResult = await BadgesLibrary.checkAndAwardBadges(profileId, 'planned_meal_created');
+      results.push({ action: 'planned_meal_created', count: plannedMealsCreated, result: plannedMealBadgeResult });
+    }
+
     // Check for voting participation badge
     const votesParticipated = await prisma.vote.count({
       where: { 
@@ -243,11 +246,12 @@ router.post('/award-retroactive/:profileId', async (req, res) => {
       message: allBadgeNotifications.length > 0 ? 
                `Congratulations! You earned ${allBadgeNotifications.length} badge achievement(s) for your past activities!` :
                'No new badges earned from past activities',
-      badgeNotifications: allBadgeNotifications,
-      details: results,
+      badgeNotifications: toCamelCaseDeep(allBadgeNotifications),
+      details: toCamelCaseDeep(results),
       summary: {
         groupsCreated,
         mealsCreated,
+        plannedMealsCreated,
         votesParticipated,
         votingSessionsWon: votingSessions
       }
@@ -271,7 +275,7 @@ router.post('/track', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields: profileId, action' });
     }
     const result = await BadgesLibrary.checkAndAwardBadges(profileId, action, metadata);
-    res.status(200).json(result);
+    res.status(200).json(toCamelCaseDeep(result));
   } catch (error) {
     console.error('Error tracking badge progress:', error);
     res.status(500).json({ error: 'Internal server error', details: error.message });
