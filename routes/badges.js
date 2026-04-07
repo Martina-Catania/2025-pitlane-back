@@ -3,6 +3,29 @@ const BadgesLibrary = require('../controllers/badgesLib');
 const { prisma } = require('../config/prismaClient');
 const router = express.Router();
 
+function normalizeResponseKey(key) {
+  return key
+    .replace(/_([a-z])/g, (_, c) => c.toUpperCase())
+    .replace(/ID\b/g, 'Id')
+    .replace(/URL\b/g, 'Url')
+    .replace(/^([A-Z])/, (c) => c.toLowerCase());
+}
+
+function toCamelCaseDeep(value) {
+  if (Array.isArray(value)) {
+    return value.map(toCamelCaseDeep);
+  }
+
+  if (value && typeof value === 'object' && value.constructor === Object) {
+    return Object.entries(value).reduce((acc, [key, nestedValue]) => {
+      acc[normalizeResponseKey(key)] = toCamelCaseDeep(nestedValue);
+      return acc;
+    }, {});
+  }
+
+  return value;
+}
+
 /**
  * @route GET /badges
  * @desc Get all available badges
@@ -13,7 +36,7 @@ router.get('/', async (req, res) => {
     const result = await BadgesLibrary.getAllBadges();
     
     if (result.success) {
-      res.json(result.data);
+      res.json(toCamelCaseDeep(result.data));
     } else {
       res.status(500).json({ error: result.error });
     }
@@ -35,7 +58,7 @@ router.get('/user/:profileId', async (req, res) => {
     const result = await BadgesLibrary.getUserBadges(profileId);
     
     if (result.success) {
-      res.json(result.data);
+      res.json(toCamelCaseDeep(result.data));
     } else {
       res.status(500).json({ error: result.error });
     }
@@ -57,7 +80,7 @@ router.get('/user/:profileId/progress', async (req, res) => {
     const result = await BadgesLibrary.getUserBadgeProgress(profileId);
     
     if (result.success) {
-      res.json(result.data);
+      res.json(toCamelCaseDeep(result.data));
     } else {
       res.status(500).json({ error: result.error });
     }
@@ -79,7 +102,7 @@ router.get('/user/:profileId/stats', async (req, res) => {
     const result = await BadgesLibrary.getUserBadgeStats(profileId);
     
     if (result.success) {
-      res.json(result.data);
+      res.json(toCamelCaseDeep(result.data));
     } else {
       res.status(500).json({ error: result.error });
     }
@@ -109,7 +132,7 @@ router.post('/award', async (req, res) => {
       res.json({
         message: result.alreadyCompleted ? 'Badge already completed' : 
                  result.newlyCompleted ? 'Badge awarded successfully!' : 'Progress updated',
-        badge: result.data.badge,
+        badge: toCamelCaseDeep(result.data.badge),
         progress: result.data.progress,
         maxProgress: result.data.maxProgress,
         isCompleted: result.data.isCompleted,
@@ -145,7 +168,7 @@ router.post('/check', async (req, res) => {
         message: result.badgeNotifications.length > 0 ? 
                  `Congratulations! You earned ${result.badgeNotifications.length} badge achievement(s)!` : 
                  'No new badges earned',
-        badgeNotifications: result.badgeNotifications,
+        badgeNotifications: toCamelCaseDeep(result.badgeNotifications),
         totalResults: result.allResults.length
       });
     } else {
@@ -253,8 +276,8 @@ router.post('/award-retroactive/:profileId', async (req, res) => {
       message: allBadgeNotifications.length > 0 ? 
                `Congratulations! You earned ${allBadgeNotifications.length} badge achievement(s) for your past activities!` :
                'No new badges earned from past activities',
-      badgeNotifications: allBadgeNotifications,
-      details: results,
+      badgeNotifications: toCamelCaseDeep(allBadgeNotifications),
+      details: toCamelCaseDeep(results),
       summary: {
         groupsCreated,
         mealsCreated,
@@ -282,7 +305,7 @@ router.post('/track', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields: profileId, action' });
     }
     const result = await BadgesLibrary.checkAndAwardBadges(profileId, action, metadata);
-    res.status(200).json(result);
+    res.status(200).json(toCamelCaseDeep(result));
   } catch (error) {
     console.error('Error tracking badge progress:', error);
     res.status(500).json({ error: 'Internal server error', details: error.message });

@@ -33,7 +33,7 @@ describe('Badges API', () => {
       
       if (response.body.length == 0) expect(badge).toBeUndefined();
       else {
-      expect(badge).toHaveProperty('BadgeID');
+      expect(badge).toHaveProperty('badgeId');
       expect(badge).toHaveProperty('name');
       expect(badge).toHaveProperty('description');
       expect(badge).toHaveProperty('badgeType');
@@ -199,7 +199,7 @@ describe('Badges API', () => {
       // Verify badge structure
       if (response.body.length > 0) {
         const badge = response.body[0];
-        expect(badge).toHaveProperty('BadgeID');
+        expect(badge).toHaveProperty('badgeId');
         expect(badge).toHaveProperty('currentLevel');
         expect(badge).toHaveProperty('progress');
       }
