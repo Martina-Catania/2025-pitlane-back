@@ -5,6 +5,7 @@ const cors = require('cors');
 const http = require('http');
 const app = express();
 const PORT = process.env.PORT || 3005;
+const isVercelRuntime = Boolean(process.env.VERCEL);
 
 const routes = require('./routes');
 const { initializePrismaMiddleware } = require('./config/prismaClient');
@@ -104,8 +105,9 @@ app.get('/test-cors', (req, res) => {
 // Create HTTP server
 const httpServer = http.createServer(app);
 
-// Only start server if not in test environment
-if (process.env.NODE_ENV !== 'test') {
+// Only start server/schedulers for local or dedicated server runtime.
+// Vercel imports this file as a serverless function handler, so avoid side effects there.
+if (process.env.NODE_ENV !== 'test' && !isVercelRuntime) {
   // Start voting session scheduler
   const votingLib = require('./controllers/votingLib');
   const plannedMealsLib = require('./controllers/plannedMealsLib');
@@ -127,5 +129,8 @@ if (process.env.NODE_ENV !== 'test') {
   });
 }
 
-// Export app and server for testing
-module.exports = { app, httpServer };
+// Export the Express app as the module itself for Vercel.
+// Keep named compatibility for tests that use `{ app }` or `{ httpServer }` destructuring.
+module.exports = app;
+module.exports.app = app;
+module.exports.httpServer = httpServer;
