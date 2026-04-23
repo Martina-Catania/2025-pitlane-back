@@ -27,12 +27,23 @@ async function verifySupabaseToken(token) {
 }
 
 async function authenticateJWT(req, res, next) {
+    // Skip authentication for OPTIONS requests (preflight)
+    if (req.method === 'OPTIONS') {
+        return next();
+    }
+
     const authHeader = req.headers.authorization;
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        console.error('Auth error - No authorization header provided');
         return res.status(401).json({ error: 'No autorizado, token requerido' });
     }
 
     const token = authHeader.split(' ')[1];
+    if (!token || token === 'undefined' || token === 'null') {
+        console.error('Auth error - Invalid bearer token payload');
+        return res.status(403).json({ error: 'Token inválido' });
+    }
 
     try {
         const supabaseUser = await verifySupabaseToken(token);
@@ -46,16 +57,17 @@ async function authenticateJWT(req, res, next) {
             return next();
         }
     } catch (error) {
-        console.error('Supabase token verification failed:', error.message);
+        console.error('Auth error - Supabase validation failed:', error.message);
     }
 
     if (!JWT_SECRET) {
-        return res.status(500).json({ error: 'JWT_SECRET no configurado en backend' });
+        console.error('Auth error - JWT_SECRET is not configured');
+        return res.status(500).json({ error: 'Configuración de autenticación inválida' });
     }
 
     jwt.verify(token, JWT_SECRET.trim(), (err, user) => {
         if (err) {
-            console.log('TOKEN INVALIDO:', err.message);
+            console.error('Auth error - Invalid token:', err.message);
             return res.status(403).json({ error: 'Token inválido' });
         }
         req.user = user;

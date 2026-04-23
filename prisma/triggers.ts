@@ -1,6 +1,11 @@
 import postgres from "postgres";
 import "dotenv/config";
 
+declare const process: {
+  env: Record<string, string | undefined>;
+  exit(code?: number): never;
+};
+
 const dbUrl = process.env.DATABASE_URL;
 
 if (!dbUrl) {

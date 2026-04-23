@@ -13,6 +13,22 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /dietary-restrictions/excluding-for-everyone - get all restrictions except "For Everyone" (id = 0)
+router.get('/excluding-for-everyone', async (req, res) => {
+  try {
+    const restrictions = await prisma.dietaryRestriction.findMany({
+      where: {
+        DietaryRestrictionID: {
+          not: 0
+        }
+      }
+    });
+    res.json(restrictions);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /dietary-restrictions - create a new dietary restriction
 router.post('/', async (req, res) => {
   try {
