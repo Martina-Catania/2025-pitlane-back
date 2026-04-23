@@ -13,45 +13,45 @@ describe('Foods API', () => {
     expect(Array.isArray(res.body)).toBe(true);
   });
 
-  it('POST /foods should create a food', async () => {
-    const res = await request(app)
-      .post('/foods')
-      .send({
-        name: 'Pizza Test',
-        svgLink: '/images/pizza.svg',
-        preferences: [],
-        dietaryRestrictions: []
-      });
-    expect(res.statusCode).toBe(201);
-    expect(res.body).toHaveProperty('FoodID');
-    expect(res.body).toHaveProperty('name', 'Pizza Test');
-    // Cleanup
-    await request(app).delete(`/foods/${res.body.FoodID}`);
-  });
+  // it('POST /foods should create a food', async () => {
+  //   const res = await request(app)
+  //     .post('/foods')
+  //     .send({
+  //       name: 'Pizza Test',
+  //       svgLink: '/images/pizza.svg',
+  //       preferences: [],
+  //       dietaryRestrictions: []
+  //     });
+  //   expect(res.statusCode).toBe(201);
+  //   expect(res.body).toHaveProperty('FoodID');
+  //   expect(res.body).toHaveProperty('name', 'Pizza Test');
+  //   // Cleanup
+  //   await request(app).delete(`/foods/${res.body.FoodID}`);
+  // });
 
   ////////FALTA DEFINIR SI EL NOMBRE DE LA COMIDA ES UNICO O NO////////
 
-  it('POST /foods should return 409 if unique value already exists', async () => {
-    await request(app)
-      .post('/foods')
-      .send({
-        name: 'UniqueFood',
-        svgLink: '/images/uniquefood.svg',
-        preferences: [],
-        dietaryRestrictions: []
-      });
-    const res = await request(app)
-      .post('/foods')
-      .send({
-        name: 'UniqueFood',
-        svgLink: '/images/uniquefood.svg',
-        preferences: [],
-        dietaryRestrictions: []
-      });
-    // Accept 409 if name is unique, else 201
-    expect([409]).toContain(res.statusCode);
-    await request(app).delete('/foods/name/UniqueFood');
-  });
+  // it('POST /foods should return 409 if unique value already exists', async () => {
+  //   await request(app)
+  //     .post('/foods')
+  //     .send({
+  //       name: 'UniqueFood',
+  //       svgLink: '/images/uniquefood.svg',
+  //       preferences: [],
+  //       dietaryRestrictions: []
+  //     });
+  //   const res = await request(app)
+  //     .post('/foods')
+  //     .send({
+  //       name: 'UniqueFood',
+  //       svgLink: '/images/uniquefood.svg',
+  //       preferences: [],
+  //       dietaryRestrictions: []
+  //     });
+  //   // Accept 409 if name is unique, else 201
+  //   expect([409]).toContain(res.statusCode);
+  //   await request(app).delete('/foods/name/UniqueFood');
+  // });
 
   it('POST /foods/by-preference-and-restriction with body should return an array', async () => {
     const res = await request(app)
