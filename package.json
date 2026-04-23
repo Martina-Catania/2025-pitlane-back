@@ -14,7 +14,11 @@
     "tsx": "^4.20.5"
   },
   "scripts": {
-    "prestart": "npx prisma generate",
+    "prisma:generate": "prisma generate",
+    "postinstall": "npm run prisma:generate",
+    "build": "npm run prisma:generate",
+    "vercel-build": "npm run prisma:generate",
+    "prestart": "npm run prisma:generate",
     "start": "node index.js",
     "test": "jest",
     "test:watch": "jest --watch",
